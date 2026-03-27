@@ -269,7 +269,15 @@ async def run_status(run_id: str):
     if result is None:
         return RunStatusResponse(status="running")
 
-    return RunStatusResponse(**asdict(result))
+    # Handle both Pydantic BaseModel and dataclass results
+    if hasattr(result, "model_dump"):
+        data = result.model_dump()
+    elif hasattr(result, "__dataclass_fields__"):
+        from dataclasses import asdict
+        data = asdict(result)
+    else:
+        data = vars(result) if hasattr(result, "__dict__") else {"status": str(result)}
+    return RunStatusResponse(**data)
 
 
 @app.get("/api/integrations", response_model=IntegrationsResponse)
