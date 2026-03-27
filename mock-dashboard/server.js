@@ -38,7 +38,31 @@ app.get('/api/bland/call/:callId', async (req, res) => {
   }
 });
 
-// Generate PDF from HTML
+// Generate PDF and return as URL for embedding
+app.post('/api/report/preview', async (req, res) => {
+  try {
+    const puppeteer = require('puppeteer');
+    const fs = require('fs');
+    const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
+    const page = await browser.newPage();
+    await page.setContent(req.body.html, { waitUntil: 'networkidle0' });
+    const pdf = await page.pdf({
+      format: 'Letter',
+      margin: { top: '0.75in', bottom: '0.75in', left: '0.75in', right: '0.75in' },
+      printBackground: true,
+    });
+    await browser.close();
+    const fname = req.body.filename || 'report';
+    const path = require('path');
+    const outPath = path.join(__dirname, `${fname}.pdf`);
+    fs.writeFileSync(outPath, pdf);
+    res.json({ url: `/${fname}.pdf` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Generate PDF from HTML (download)
 app.post('/api/report/pdf', async (req, res) => {
   try {
     const puppeteer = require('puppeteer');

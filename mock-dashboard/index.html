@@ -69,7 +69,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Inter',system-ui,sans-ser
 .pipeline.tabbed .pipe-step.done{color:var(--t3);}
 
 /* Main content — fixed two-column layout */
-.main{position:relative;z-index:10;height:calc(100vh - 130px);display:grid;grid-template-columns:1fr 400px;overflow:hidden;}
+.main{position:relative;z-index:10;height:calc(100vh - 160px);display:grid;grid-template-columns:1fr 400px;overflow:hidden;}
 .left-panel{padding:20px 24px;overflow-y:auto;scrollbar-width:none;border-right:1px solid var(--border);display:flex;flex-direction:column;}
 .left-panel::-webkit-scrollbar{display:none;}
 .right-panel{padding:20px 24px;display:flex;flex-direction:column;overflow:hidden;}
@@ -200,30 +200,47 @@ body{background:var(--bg);color:var(--t1);font-family:'Inter',system-ui,sans-ser
 .sg-item .sv{font-size:28px;font-weight:900;font-family:'JetBrains Mono',monospace;}
 .sg-item .sl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-top:4px;}
 
-/* Research pipeline */
-.research-pipeline{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
-.rp-node{background:var(--card);border-radius:8px;padding:10px 14px;border:1px solid var(--border);
-  display:flex;align-items:center;gap:10px;font-size:12px;transition:all .4s;animation:fadeUp .3s ease;}
-.rp-node .rp-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;
-  font-size:11px;flex-shrink:0;font-weight:800;font-family:'JetBrains Mono',monospace;letter-spacing:-0.5px;}
-.rp-icon.ico-aerospike{background:rgba(239,68,68,.15)!important;color:#f87171!important;border:1.5px solid rgba(239,68,68,.25);}
-.rp-icon.ico-senso{background:rgba(16,185,129,.15)!important;color:#34d399!important;border:1.5px solid rgba(16,185,129,.25);}
-.rp-icon.ico-airbyte{background:rgba(99,102,241,.15)!important;color:#a5b4fc!important;border:1.5px solid rgba(99,102,241,.25);}
-.rp-icon.ico-claude{background:rgba(212,165,116,.2)!important;color:#d4a574!important;border:1.5px solid rgba(212,165,116,.3);}
-.rp-icon.ico-ghost{background:rgba(168,85,247,.15)!important;color:#c084fc!important;border:1.5px solid rgba(168,85,247,.25);}
-.rp-icon.ico-overmind{background:rgba(99,102,241,.15)!important;color:#818cf8!important;border:1.5px solid rgba(99,102,241,.25);}
-.rp-icon.ico-auth0{background:rgba(235,84,36,.15)!important;color:#fb923c!important;border:1.5px solid rgba(235,84,36,.25);}
-.rp-icon.ico-truefoundry{background:rgba(245,158,11,.15)!important;color:#fbbf24!important;border:1.5px solid rgba(245,158,11,.25);}
-.rp-node .rp-src{color:var(--t2);font-weight:600;min-width:80px;}
-.rp-node .rp-detail{color:var(--t3);flex:1;font-size:11px;}
-.rp-node .rp-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;}
-.rp-node.rp-active{border-color:rgba(161,161,170,.3);}
-.rp-node.rp-active .rp-icon{background:rgba(161,161,170,.1);color:var(--t2);}
-.rp-node.rp-done{border-color:rgba(34,197,94,.2);}
-.rp-node.rp-done .rp-icon{background:rgba(34,197,94,.15);color:var(--green);}
-.rp-finding{background:rgba(139,92,246,.05);border:1px solid rgba(139,92,246,.15);border-radius:8px;
-  padding:10px 14px;margin-top:4px;font-size:11px;color:var(--t2);line-height:1.5;animation:fadeUp .3s ease;}
-.rp-finding b{color:var(--t1);}
+/* Data pipeline — stage-based horizontal flow */
+.dp-wrap{flex:1;display:flex;flex-direction:column;overflow-y:auto;scrollbar-width:none;}
+.dp-wrap::-webkit-scrollbar{display:none;}
+.dp-stage{margin-bottom:14px;animation:fadeUp .3s ease;}
+.dp-stage-header{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);
+  margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.dp-stage-header::after{content:'';flex:1;height:1px;background:var(--border);}
+.dp-stage-nodes{display:flex;gap:6px;flex-wrap:wrap;}
+.dp-node{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);
+  border-radius:8px;padding:8px 12px;min-width:130px;opacity:0;transform:translateX(-8px);
+  transition:all .4s cubic-bezier(.16,1,.3,1);}
+.dp-node.vis{opacity:1;transform:translateX(0);}
+.dp-node.n-active{border-color:var(--t3);}
+.dp-node.n-active .dp-ico-wrap{box-shadow:0 0 10px rgba(255,255,255,.05);}
+.dp-node.n-done{border-color:rgba(34,197,94,.25);}
+.dp-node.n-done .dp-ico-wrap{border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.04);}
+.dp-node.n-done .dp-name{color:var(--t1);}
+.dp-ico-wrap{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--card);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .3s;}
+.dp-ico-wrap .dp-ico{font-size:15px;}
+.dp-node-info{display:flex;flex-direction:column;gap:1px;}
+.dp-name{font-size:11px;font-weight:600;color:var(--t3);transition:color .3s;}
+.dp-sponsor{font-size:8px;font-weight:700;font-family:'JetBrains Mono',monospace;}
+.sp-claude{color:#d4a574!important;}
+.sp-aerospike{color:#f87171!important;}
+.sp-senso{color:#34d399!important;}
+.sp-airbyte{color:#a5b4fc!important;}
+.sp-ghost{color:#c084fc!important;}
+.sp-overmind{color:#818cf8!important;}
+.sp-truefoundry{color:#fbbf24!important;}
+.sp-auth0{color:#fb923c!important;}
+.sp-bland{color:#60a5fa!important;}
+/* Stage arrow */
+.dp-arrow{display:flex;align-items:center;justify-content:center;margin:4px 0;color:var(--border);font-size:16px;transition:color .4s;}
+.dp-arrow.arr-done{color:rgba(34,197,94,.4);}
+.dp-arrow svg{width:20px;height:20px;}
+/* Status badge on node */
+.dp-node .dp-stat{font-size:7px;font-weight:700;padding:1px 5px;border-radius:3px;margin-left:auto;
+  font-family:'JetBrains Mono',monospace;letter-spacing:.3px;}
+.dp-stat-run{background:rgba(161,161,170,.08);color:var(--t3);}
+.dp-stat-done{background:rgba(34,197,94,.1);color:var(--green);}
 
 /* Report */
 .report-section{background:var(--card);border-radius:10px;padding:14px;border:1px solid var(--border);
@@ -293,7 +310,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Inter',system-ui,sans-ser
 </div>
 
 <script>
-const BLAND_API_KEY="org_81e318d0be774ddfd4c97663dc84d55114609a59349d6259714e742c28aea6fa5bfa58167dab1e9d0a8969";
+const BLAND_API_KEY="org_c32ebe20e58b03a6df7563569933a60f230a7ab4df22fe75a4caf6aff7c580be3697927059a5b02e849969";
 const PHONE_NUMBER="+46761658009";
 const breachUsers=[
   {email:"sarah.chen@acme.com",name:"Sarah Chen",phone:"+1XXXXXXXXXX",mock:true,duration:35,noAnswer:false},
@@ -404,28 +421,30 @@ async function callBland(user){
   try{
     const r=await fetch('/api/bland/call',{method:'POST',headers:{'x-bland-key':BLAND_API_KEY,'Content-Type':'application/json'},
       body:JSON.stringify({phone_number:user.phone,from:null,
-        task:`You are Alex from Acme Corp security. Be concise and direct. Keep sentences short. Get to the point fast. Don't ramble.
+        task:`You are Alex from Acme Corp security. Be natural and conversational but don't ramble. Keep your default responses to 2-3 sentences. But if the user asks a question or wants more detail, give them a proper answer — 3-5 sentences is fine when they're asking for clarification. Never repeat something you already said unless they specifically ask you to.
 
-THE SITUATION: A site called darkforum_x was breached. ${user.name}'s email (${user.email}) and password hash were in the leak. The hash matches their Acme account — meaning they reused their password. We've temporarily locked their account.
+SITUATION: darkforum_x (e-commerce site) was breached two days ago. ${user.name}'s email (${user.email}) and password hash were in the leaked dump. The hash matches their Acme Corp account, meaning they reused their password. We've temporarily locked their account as a precaution.
 
-YOUR JOB:
-1. Briefly explain the breach (2-3 sentences max)
-2. Tell them their account is locked
-3. Ask: keep it locked or unlock it?
-4. Confirm their choice
-5. Tell them to reset at acme.com/reset
-6. Ask if they have questions — if not, wrap up
+CALL FLOW:
+1. The first sentence already covered the basics. Ask if they have questions or want more detail about what happened.
+2. If they ask questions, answer them naturally and thoroughly. Don't rush them.
+3. When they're ready, ask: "Would you like us to keep your account locked until you reset your password, or would you prefer we unlock it now?"
+4. Confirm their choice in one sentence.
+5. Tell them to reset at acme.com/reset and change the password anywhere else they used it.
+6. Ask if there's anything else. If not, wrap up.
 
-STYLE: Be warm but efficient. Short sentences. Don't over-explain unless they ask. If they ask questions, answer them clearly and briefly. If they seem to understand, move on quickly. Don't repeat yourself.
+IF THEY ASK QUESTIONS — give real answers:
+- What is darkforum_x: "It's a third-party e-commerce platform that got breached about two days ago. Hackers got into their database and posted the user credentials online."
+- How did you find my data: "We run automated scans of dark web sources and breach databases. Your email and password hash showed up in the dump, and when we compared the hash to what we have on file, it matched."
+- Was my account accessed by anyone: "Not that we can tell. We locked it as soon as we detected the match, so we believe we caught it in time. There's no sign of unauthorized access."
+- What's a password hash: "It's an encrypted version of your password. The fact that the hash from the leak matches ours means you used the same password on both sites."
+- How bad is this: "The main risk is that someone could use the leaked credentials to log into your Acme account. But since we've already locked it, that's not possible right now."
+- Talk to a human: "Absolutely, you can email security at acme dot com and someone from the team will follow up within 24 hours."
 
-IF THEY ASK:
-- What is darkforum_x: "An e-commerce site that got hacked"
-- Was my account accessed: "No, we locked it as soon as we detected the match"
-- What's a password hash: "An encrypted version of your password — the match means you used the same password"
-- Can I talk to a human: "Sure, email security@acme.com"`,
-        first_sentence:`Hey ${user.name}, this is Alex from Acme Corp security. Quick heads up — a site called darkforum x was breached, and your credentials were in the leak. We've locked your account to be safe. I just need a minute to explain and get your preference on next steps.`,
+STYLE: Warm, professional, human. After you speak, wait for them to respond. Don't over-explain unprompted, but don't be robotic either.`,
+        first_sentence:`Hey ${user.name}, this is Alex from Acme Corp security. A site called darkforum x was breached and your credentials were in the leak, so we've locked your account as a precaution. Do you have any questions about what happened, or should I jump straight to next steps?`,
         max_duration:10,record:true,voice:"mason",wait_for_greeting:false,language:"en",temperature:0.7,
-        interruption_threshold:200,block_interruptions:false,background_track:"none",noise_cancellation:true})});
+        interruption_threshold:null,block_interruptions:true,background_track:"none",noise_cancellation:true})});
     return await r.json();
   }catch(e){return{status:'error',error:e.message};}
 }
@@ -440,36 +459,48 @@ const monSources=['pastebin.com','ghostbin.me','haveibeenpwned.com','raidforums.
 let monInterval=null, monCount=0;
 
 function startMonitoring(){
-  const feed=$('monFeed'), srcList=$('srcList');
-  if(!feed||!srcList)return;
-
-  // Populate source list
-  const activeSources=['pastebin.com','haveibeenpwned.com','dehashed.com','snusbase.com','breachdb.io',
-    'leakcheck.net','exploit.in','telegram/leaks_db','darkforum_x.onion','raidforums.cc'];
-  activeSources.forEach(s=>{
-    const d=document.createElement('div');d.className='source-item';
-    d.innerHTML=`<span>${s}</span><span class="src-status">CLEAN</span>`;
-    srcList.appendChild(d);
-  });
-
-  $('msUptime').textContent='14h';
-  $('msScanned').textContent='847';
-  $('msClean').textContent='847';
+  const feed=$('monFeed');
+  if(!feed)return;
   monCount=847;
 
-  // Continuous feed
+  // Seed initial feed entries
+  for(let i=0;i<15;i++){
+    const src=monSources[Math.floor(Math.random()*monSources.length)];
+    const t=new Date(Date.now()-((15-i)*800));
+    const ts=t.toTimeString().slice(0,8);
+    const d=document.createElement('div');
+    d.innerHTML=`<span class="mf-time">${ts}</span> <span class="mf-ok">&#10003;</span> ${src} <span class="mf-info">— no new dumps</span>`;
+    feed.appendChild(d);
+  }
+  feed.scrollTop=feed.scrollHeight;
+
+  // Seed incident log with monitoring activity
+  const monLogMsgs=[
+    'Monitoring 25 dark web sources — all clear',
+    'Scheduled scan cycle #847 complete',
+    'Aerospike vector index: 847 breach records indexed',
+    'Auth0 health check: all endpoints nominal',
+    'Ghost DB: 50 user records, 0 active incidents',
+  ];
+  monLogMsgs.reverse().forEach(m=>ilog(m,'lf-success'));
+
+  let monLogCount=0;
+  const monLogInterval=setInterval(()=>{
+    if(running)return clearInterval(monLogInterval);
+    monLogCount++;
+    monCount++;
+    if(monLogCount%4===0) ilog(`Scan cycle #${monCount} — ${monSources[Math.floor(Math.random()*monSources.length)]} checked`,'');
+  },3200);
+
   monInterval=setInterval(()=>{
     if(running)return clearInterval(monInterval);
-    monCount++;
     const src=monSources[Math.floor(Math.random()*monSources.length)];
     const now=new Date().toTimeString().slice(0,8);
     const d=document.createElement('div');
     d.innerHTML=`<span class="mf-time">${now}</span> <span class="mf-ok">&#10003;</span> ${src} <span class="mf-info">— no new dumps</span>`;
     feed.appendChild(d);
-    if(feed.children.length>30)feed.removeChild(feed.firstChild);
+    if(feed.children.length>40)feed.removeChild(feed.firstChild);
     feed.scrollTop=feed.scrollHeight;
-    $('msScanned').textContent=monCount;
-    $('msClean').textContent=monCount;
   },800);
 }
 
@@ -480,44 +511,50 @@ async function run(){
   if(running)return;running=true;
   timerStart=Date.now();timerInt=setInterval(updateTimer,50);
 
-  // === SCAN ===
+  // === SCAN — inject breach into existing monitoring feed ===
   setPhase('scan');setBadge('b-scan','Deep Scan');
+  ilog('<b>Deep scan initiated...</b>','lf-action');
 
-  ilog('<b>Deep scan initiated across dark web sources...</b>','lf-action');
+  const feed=$('monFeed');
+  if(feed){
+    // Add a few more clean scans
+    const cleanSites=['pastebin.com','ghostbin.me'];
+    for(const site of cleanSites){
+      const d=document.createElement('div');
+      d.innerHTML=`<span class="mf-time">${new Date().toTimeString().slice(0,8)}</span> <span class="mf-ok">&#10003;</span> ${site} <span class="mf-info">— no new dumps</span>`;
+      feed.appendChild(d);feed.scrollTop=feed.scrollHeight;
+      ilog(`&#10003; ${site} — clean`,'lf-success');
+      await sleep(400);
+    }
 
-  const domains=['pastebin.com','ghostbin.me','darkforum_x.onion','haveibeenpwned.com','raidforums.cc',
-    'breachdb.io','leakcheck.net','dehashed.com','snusbase.com','weleakinfo.to','databases.today',
-    'leak.sx','cracked.io','nulled.to','exploit.in','xss.is','breached.vc','telegram/leaks_db',
-    'anonfiles.com','mega.nz/dumps','discord/breach-alerts'];
+    // THE BREACH
+    await sleep(600);
+    const hit=document.createElement('div');
+    hit.style.cssText='color:var(--red);font-weight:700;padding:4px 0;';
+    hit.innerHTML=`<span class="mf-time">${new Date().toTimeString().slice(0,8)}</span> &#9888; <b>darkforum_x.onion</b> — <span style="color:var(--red);">CREDENTIAL DUMP DETECTED — 150 records</span>`;
+    feed.appendChild(hit);feed.scrollTop=feed.scrollHeight;
+    ilog(`&#9888; <b>BREACH FOUND on darkforum_x.onion</b> — credential dump detected!`,'lf-crit');
 
-  setLeft(`<div class="slabel">Scanning for Data Breach</div><div class="scan-domains" id="scanDoms"></div><div class="scan-counter" id="scanCount">Scanned: <b>0</b> / ${domains.length} sources</div><div id="scanAlert"></div>`);
-  const scanDoms=$('scanDoms'),scanCount=$('scanCount');
+    await sleep(1200);
+    setBadge('b-red','Breach Found');
 
-  for(let i=0;i<domains.length;i++){
-    const isHit=domains[i]==='darkforum_x.onion';
-    const d=document.createElement('div');
-    if(isHit){d.className='hit';d.textContent=`\u26a0 ${domains[i]} — BREACH DATA FOUND`;}
-    else{d.className='checked';d.textContent=`\u2713 ${domains[i]} — clean`;}
-    scanDoms.appendChild(d);scanDoms.scrollTop=scanDoms.scrollHeight;
-    scanCount.innerHTML=`Scanned: <b>${i+1}</b> / ${domains.length} sources`;
-    if(!isHit) ilog(`&#10003; ${domains[i]} — clean`,'lf-success');
-    if(isHit){ilog(`&#9888; <b>BREACH FOUND on ${domains[i]}</b> — credential dump detected!`,'lf-crit');await sleep(200);break;}
-    await sleep(120);
+    // Add breach details as feed entries
+    const details=[
+      'Analyzing dump: darkforum_x.onion — 150 credential pairs (email + bcrypt hash)',
+      'Source identified: third-party e-commerce platform compromise',
+      'Dump date: March 25, 2026 — published 2 days ago',
+      'Initiating automated incident response...',
+    ];
+    for(const line of details){
+      const d=document.createElement('div');
+      d.style.cssText='color:var(--t2);padding:1px 0;font-size:11px;';
+      d.innerHTML=`<span class="mf-time">${new Date().toTimeString().slice(0,8)}</span> <span style="color:var(--red);">&#9654;</span> ${line}`;
+      feed.appendChild(d);feed.scrollTop=feed.scrollHeight;
+      await sleep(400);
+    }
+    ilog('&#128680; <b>BREACH DETECTED</b> — 150 credentials on darkforum_x.onion. Initiating response.','lf-crit');
   }
-  await sleep(800);
-
-  // Breach found — append alert below scan results, don't replace
-  setBadge('b-red','Breach Found');
-  $('scanAlert').innerHTML=`<div style="margin-top:16px;padding:14px;border:1px solid rgba(239,68,68,.2);border-radius:8px;background:rgba(239,68,68,.04);">
-    <div style="color:var(--red);font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Breach Detected</div>
-    <div style="color:var(--t2);font-size:12px;font-family:'JetBrains Mono',monospace;line-height:1.6;">
-      Source: <b style="color:var(--t1);">darkforum_x.onion</b><br>
-      Records: <b style="color:var(--t1);">150</b> credential pairs (email + bcrypt hash)<br>
-      Origin: Third-party e-commerce platform compromise<br>
-      Status: <span style="color:var(--red);font-weight:600;">Initiating automated response...</span>
-    </div></div>`;
-  ilog('&#128680; <b>BREACH DETECTED</b> — 150 credentials on darkforum_x.onion. Initiating response.','lf-crit');
-  await sleep(2500);
+  await sleep(1500);
   saveSnapshot('scan');
 
   // === MATCH ===
@@ -691,58 +728,74 @@ async function run(){
   setPhase('research');setBadge('b-scan','Researching');
   ilog('<b>Initiating autonomous research pipeline...</b>','lf-action');
 
-  setLeft(`<div class="slabel">Autonomous Research Pipeline</div><div class="research-pipeline" id="resPipe"></div><div id="resFindings" style="margin-top:12px;"></div>`);
-  const rp=$('resPipe'),rf=$('resFindings');
-
-  const researchSteps=[
-    {ico:'ico-aerospike',abbr:'AS',src:'Aerospike',detail:'Vector search: similar past breaches in incident database',api:'aerospike/vector-search',ms:89},
-    {ico:'ico-senso',abbr:'S',src:'Senso.ai',detail:'Querying knowledge base: credential breach mitigation playbooks',api:'senso.ai/v1/knowledge/query',ms:234},
-    {ico:'ico-airbyte',abbr:'AB',src:'Airbyte',detail:'Ingesting NIST CVE database for darkforum_x vulnerabilities',api:'airbyte/sources/nist-cve/sync',ms:412},
-    {ico:'ico-claude',abbr:'C',src:'Claude',detail:'Analyzing 12 similar incidents from 2024-2026 for pattern matching',api:'truefoundry/gateway/chat',ms:1842},
-    {ico:'ico-ghost',abbr:'G',src:'Ghost DB',detail:'Retrieving historical response outcomes for credential breaches',api:'ghost-db/incidents?type=credential',ms:45},
-    {ico:'ico-senso',abbr:'S',src:'Senso.ai',detail:'Searching academic literature: password reuse attack vectors',api:'senso.ai/v1/research/search',ms:567},
-    {ico:'ico-claude',abbr:'C',src:'Claude',detail:'Cross-referencing CA Civil Code 1798.82 notification requirements',api:'truefoundry/gateway/chat',ms:923},
-    {ico:'ico-airbyte',abbr:'AB',src:'Airbyte',detail:'Syncing CCPA enforcement actions database for compliance patterns',api:'airbyte/sources/ccpa-enforcement/sync',ms:389},
-    {ico:'ico-aerospike',abbr:'AS',src:'Aerospike',detail:'Finding nearest-neighbor mitigation strategies (cosine similarity: 0.94)',api:'aerospike/vector-search',ms:67},
-    {ico:'ico-claude',abbr:'C',src:'Claude',detail:'Synthesizing research into actionable recommendations',api:'truefoundry/gateway/chat',ms:2103},
-    {ico:'ico-ghost',abbr:'G',src:'Ghost DB',detail:'Storing research findings + updating incident knowledge graph',api:'ghost-db/research/store',ms:34},
-    {ico:'ico-overmind',abbr:'OM',src:'Overmind',detail:'Tracing research chain for audit + observability',api:'overmind/v1/traces',ms:28},
+  // Stage-based pipeline
+  const stages=[
+    {name:'Data Collection',nodes:[
+      {id:'inc',ico:'&#128196;',name:'Incident Data',sp:'sp-ghost',spl:'Ghost'},
+      {id:'dweb',ico:'&#127760;',name:'Dark Web Feeds',sp:'sp-airbyte',spl:'Airbyte'},
+      {id:'nist',ico:'&#128218;',name:'NIST CVE DB',sp:'sp-airbyte',spl:'Airbyte'},
+      {id:'acad',ico:'&#128214;',name:'Academic Papers',sp:'sp-senso',spl:'Senso'},
+      {id:'past',ico:'&#128451;',name:'Past Incidents',sp:'sp-aerospike',spl:'Aerospike'},
+    ],msg:'Collecting from 5 sources: Ghost DB, Airbyte dark web connectors, NIST, Senso.ai, Aerospike'},
+    {name:'Ingestion & Indexing',nodes:[
+      {id:'ingest',ico:'&#128229;',name:'Airbyte Ingest',sp:'sp-airbyte',spl:'Airbyte'},
+      {id:'vec',ico:'&#128300;',name:'Vectorize & Index',sp:'sp-aerospike',spl:'Aerospike'},
+      {id:'know',ico:'&#129504;',name:'Knowledge Base',sp:'sp-senso',spl:'Senso'},
+    ],msg:'847 records ingested via Airbyte, vectorized in Aerospike, Senso.ai knowledge base loaded'},
+    {name:'Deep Analysis',nodes:[
+      {id:'sim',ico:'&#128270;',name:'Similarity Search',sp:'sp-aerospike',spl:'Aerospike'},
+      {id:'deep',ico:'&#129302;',name:'Claude Analysis',sp:'sp-claude',spl:'Claude'},
+      {id:'comp',ico:'&#9878;',name:'Compliance Check',sp:'sp-claude',spl:'Claude'},
+      {id:'gate',ico:'&#128274;',name:'AI Gateway',sp:'sp-truefoundry',spl:'Truefoundry'},
+    ],msg:'12 similar incidents found. Claude cross-referencing 23 papers + CA 1798.82 + NIST SP 800-61r2'},
+    {name:'Synthesis & Validation',nodes:[
+      {id:'pat',ico:'&#128200;',name:'Pattern Detection',sp:'sp-claude',spl:'Claude'},
+      {id:'rec',ico:'&#128161;',name:'Recommendations',sp:'sp-claude',spl:'Claude'},
+      {id:'fact',ico:'&#9989;',name:'Fact Check',sp:'sp-senso',spl:'Senso'},
+    ],msg:'Voice calls 6.5x more effective than email. 4 recommendations generated, fact-checked'},
+    {name:'Audit & Storage',nodes:[
+      {id:'trace',ico:'&#128065;',name:'Trace & Audit',sp:'sp-overmind',spl:'Overmind'},
+      {id:'auth',ico:'&#128274;',name:'Auth0 Review',sp:'sp-auth0',spl:'Auth0'},
+      {id:'store',ico:'&#128451;',name:'Store Findings',sp:'sp-ghost',spl:'Ghost'},
+    ],msg:'Decision trace recorded via Overmind. Auth0 policy review complete. Ghost DB updated'},
+    {name:'Output',nodes:[
+      {id:'learn',ico:'&#128736;',name:'Context Learn',sp:'sp-senso',spl:'Senso'},
+      {id:'kiro',ico:'&#128640;',name:'Kiro Spec',sp:'',spl:'Kiro'},
+      {id:'rpt',ico:'&#128196;',name:'Generate Report',sp:'sp-claude',spl:'Claude'},
+    ],msg:'Knowledge graph updated. Kiro spec generated. Compliance report ready'},
   ];
 
-  for(let i=0;i<researchSteps.length;i++){
-    const s=researchSteps[i];
-    const node=document.createElement('div');node.className='rp-node rp-active';
-    node.innerHTML=`<div class="rp-icon ${s.ico}">${s.abbr}</div><div class="rp-src">${s.src}</div><div class="rp-detail">${s.detail}</div><div class="rp-status" style="background:rgba(161,161,170,.1);color:var(--t2);">RUNNING</div>`;
-    rp.appendChild(node);rp.scrollTop=rp.scrollHeight;
-    iapi('POST',s.api,200,s.ms);
-    await sleep(600);
-    node.className='rp-node rp-done';
-    node.querySelector('.rp-status').textContent='DONE';
-    node.querySelector('.rp-status').style.background='rgba(34,197,94,.15)';
-    node.querySelector('.rp-status').style.color='var(--green)';
+  let pipeHTML='';
+  stages.forEach((s,si)=>{
+    const nodesH=s.nodes.map(n=>
+      `<div class="dp-node" id="dn-${n.id}"><div class="dp-ico-wrap"><span class="dp-ico">${n.ico}</span></div>
+        <div class="dp-node-info"><div class="dp-name">${n.name}</div><div class="dp-sponsor ${n.sp}">${n.spl}</div></div>
+        <div class="dp-stat" id="ds-${n.id}"></div></div>`).join('');
+    pipeHTML+=`<div class="dp-stage" id="stg-${si}"><div class="dp-stage-header">${s.name}</div><div class="dp-stage-nodes">${nodesH}</div></div>`;
+    if(si<stages.length-1) pipeHTML+=`<div class="dp-arrow" id="arr-${si}">&#8595;</div>`;
+  });
 
-    // Show key findings at certain steps
-    if(i===3){
-      const f=document.createElement('div');f.className='rp-finding';
-      f.innerHTML=`<b>&#128161; Finding:</b> 12 similar credential breach incidents found (2024-2026). Average response time: 47 hours. Sentinel response: under 5 minutes. Pattern: 78% of affected users who received phone calls reset passwords within 24h vs 12% for email-only notification.`;
-      rf.appendChild(f);
-      ilog('&#128161; Research finding: phone notification 6.5x more effective than email','lf-decision');
+  setLeft(`<div class="slabel">Data Pipeline</div><div class="dp-wrap">${pipeHTML}</div>`);
+
+  // Animate ~30s: 6 stages, ~5s each
+  for(let si=0;si<stages.length;si++){
+    const s=stages[si];
+    ilog(s.msg,'lf-action');
+    for(const n of s.nodes){
+      const el=document.getElementById('dn-'+n.id);
+      const st=document.getElementById('ds-'+n.id);
+      if(el)el.classList.add('vis','n-active');
+      if(st){st.textContent='RUN';st.className='dp-stat dp-stat-run';}
+      iapi('POST',`${n.spl.toLowerCase()}/${n.id}`,200,Math.floor(40+Math.random()*300));
+      await sleep(1200);
+      if(el){el.classList.remove('n-active');el.classList.add('n-done');}
+      if(st){st.textContent='DONE';st.className='dp-stat dp-stat-done';}
     }
-    if(i===6){
-      const f=document.createElement('div');f.className='rp-finding';
-      f.innerHTML=`<b>&#9878; Compliance:</b> CA Civil Code 1798.82 requires notification "in the most expedient time possible." Phone calls satisfy the "expedient" requirement. Written notice must follow within 10 business days. CCPA requires AG notification if 500+ CA residents affected.`;
-      rf.appendChild(f);
-      ilog('&#9878; CA 1798.82 compliance requirements identified','lf-action');
-    }
-    if(i===9){
-      const f=document.createElement('div');f.className='rp-finding';
-      f.innerHTML=`<b>&#129302; Recommendation:</b> Based on analysis of 12 similar incidents and NIST SP 800-61r2 guidelines: (1) Maintain account locks for minimum 72h, (2) Implement credential stuffing detection on login endpoints, (3) Enforce MFA for all reactivated accounts, (4) Monitor darkforum_x for additional dumps over next 30 days.`;
-      rf.appendChild(f);
-      ilog('&#129302; Claude synthesized 4 actionable recommendations from research','lf-success');
-    }
-    await sleep(300);
+    const arr=document.getElementById('arr-'+si);
+    if(arr)arr.classList.add('arr-done');
+    await sleep(600);
   }
-  ilog('<b>Research pipeline complete.</b> 12 sources queried, 3 key findings, 4 recommendations.','lf-success');
+  ilog('<b>Research pipeline complete.</b> 6 stages, 21 nodes, 5 data sources.','lf-success');
   await sleep(1500);
   saveSnapshot('research');
 
@@ -756,7 +809,7 @@ async function run(){
   setLeft(`<div style="display:flex;gap:4px;margin-bottom:12px;">
     <button class="dl-btn rtab" id="rtab-incident" style="flex:1;font-size:11px;border-bottom:2px solid var(--t1);">Incident Report</button>
     <button class="dl-btn rtab" id="rtab-research" style="flex:1;font-size:11px;">Research Report</button></div>
-    <div id="reportContent" style="flex:1;overflow-y:auto;"></div>
+    <div id="reportContent" style="flex:1;overflow-y:auto;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:13px;">Generating reports...</div>
     <div id="reportActions" style="margin-top:10px;display:flex;gap:8px;"></div>`);
 
   const rc=$('reportContent'),ra=$('reportActions');
@@ -773,12 +826,10 @@ async function run(){
     {title:'8. Document Control',body:`<b>Prepared By:</b> Sentinel Autonomous Breach Response System<br><b>Classification:</b> CONFIDENTIAL — Attorney-Client Privileged<br><b>Retention:</b> 7 years per CA requirements<br><b>Review Required:</b> General Counsel / DPO within 48 hours`},
   ];
 
+  // Log report sections being generated
   for(const s of reportSections){
-    const sec=document.createElement('div');sec.className='report-section';
-    sec.innerHTML=`<div class="rs-title">${s.title}</div><div class="rs-body">${s.body}</div>`;
-    rc.appendChild(sec);
     ilog(`&#128196; <b>${s.title}</b>`,'lf-action');
-    await sleep(600);
+    await sleep(300);
   }
   ilog('<b>CCPA incident report generated.</b>','lf-success');
 
@@ -996,57 +1047,71 @@ This incident exposed gaps in the current security posture:
   window._reportSections=reportSections;
   window._reportMeta={date:new Date().toISOString(),locked,unlocked,retries};
 
-  // Build research report HTML
+  // Build research sections
   const researchSections=[
-    {title:'1. Incident Context',body:`This research report was generated autonomously by Sentinel following incident <b>SENTINEL-2026-0327-001</b> (${rDate}). A credential dump from <b>darkforum_x.onion</b> containing 150 records was matched against Acme Corp's user database, identifying 8 critical and 12 warning-level accounts.`},
-    {title:'2. Similar Incident Analysis',body:`Sentinel queried the Aerospike vector database and identified <b>12 similar credential breach incidents</b> from 2024-2026. Key patterns:<br><br><b>Breach Source Distribution:</b><br>&#8226; 67% originated from third-party e-commerce platforms<br>&#8226; 21% from SaaS provider compromises<br>&#8226; 12% from forum/community site breaches<br><br><b>Response Time Benchmarks:</b><br>&#8226; Industry average: <b>277 days</b> to detect, <b>47 hours</b> to contain<br>&#8226; Organizations with automated response: <b>under 1 hour</b> detection-to-containment<br>&#8226; Sentinel (this incident): <b>under 5 minutes</b><br><br><b>User Notification Effectiveness (from 12 incidents):</b><br>&#8226; Email-only notification: 12% of users reset passwords within 24h<br>&#8226; Email + SMS: 34% reset within 24h<br>&#8226; <b>Voice call notification: 78% reset within 24h</b> (6.5x more effective than email)<br>&#8226; Voice call with interactive decision: 91% completed recommended action during the call<br><br><em>Source: Aerospike incident vector store, Senso.ai knowledge base, NIST incident database via Airbyte</em>`},
-    {title:'3. Academic Literature Review',body:`Senso.ai knowledge base query returned 23 relevant publications. Key findings:<br><br><b>Password Reuse:</b><br>&#8226; Das et al. (2024) — 65% of users reuse passwords across 3+ services<br>&#8226; Pearman et al. (2025) — Credential stuffing success rate: 0.1-2% of leaked credentials work on other services<br>&#8226; Wang et al. (2024) — bcrypt hashes with cost factor 10 can be cracked at ~4,000 hashes/sec on consumer GPU<br><br><b>Notification Effectiveness:</b><br>&#8226; Zou et al. (2025) — Users who receive breach notifications via phone are 6.2x more likely to take action within 24h compared to email<br>&#8226; Redmiles et al. (2024) — Conversational notification (vs. scripted) increases user comprehension by 340%<br>&#8226; Ur et al. (2025) — Giving users choice in response (lock vs. unlock) increases satisfaction and compliance by 58%<br><br><b>Incident Response:</b><br>&#8226; NIST SP 800-61r2 — Recommends automated containment within 4 hours of detection<br>&#8226; Ponemon Institute (2025) — Organizations with automated IR save $3.2M per breach on average<br>&#8226; SANS Institute (2025) — Credential breach re-attacks peak at 24-48h post-publication<br><br><em>Source: Senso.ai research index, Airbyte/NIST CVE sync</em>`},
-    {title:'4. Compliance Gap Analysis',body:`<b>CA Civil Code 1798.82 (SB-1386):</b><br>&#8226; Requirement: "most expedient time possible" — <b>EXCEEDED</b> (5 min vs. industry avg 47h)<br>&#8226; Written follow-up required within 10 business days — <b>PENDING</b><br>&#8226; Content requirements per 1798.82(d) — <b>MET</b> (all required elements communicated verbally)<br><br><b>CCPA (1798.100-199):</b><br>&#8226; AG notification threshold (500 CA residents) — <b>NOT TRIGGERED</b> (8 affected)<br>&#8226; Right to know what data was compromised — <b>COMMUNICATED</b> during voice calls<br><br><b>NIST SP 800-61r2 Compliance:</b><br>&#8226; Preparation phase — Partially met (no continuous monitoring pre-incident)<br>&#8226; Detection & Analysis — <b>FULLY MET</b> (automated dark web scan + credential matching)<br>&#8226; Containment — <b>FULLY MET</b> (account locks within minutes)<br>&#8226; Post-Incident Activity — <b>IN PROGRESS</b> (this report constitutes lessons learned)<br><br><b>Identified Gaps:</b><br>&#8226; No proactive continuous monitoring (scan was manually triggered)<br>&#8226; No credential breach check at user registration<br>&#8226; No MFA enforcement for compromised accounts<br>&#8226; No multi-channel notification fallback<br>&#8226; No automated credential stuffing detection`},
-    {title:'5. Risk Mitigation Recommendations',body:`Based on the above research, ranked by impact and urgency:<br><br><b>P0 — Critical (implement within 1 week):</b><br>&#8226; Continuous dark web monitoring via Airbyte scheduled connectors + Aerospike matching<br>&#8226; Password breach check at registration via Auth0 Actions + HaveIBeenPwned API<br>&#8226; Mandatory MFA enrollment for all breach-affected accounts via Auth0<br><br><b>P1 — High (implement within 2 weeks):</b><br>&#8226; Credential stuffing detection on login endpoints (rate limiting + behavioral analysis)<br>&#8226; Multi-channel notification fallback (voice → SMS → email → in-app)<br><br><b>P2 — Medium (implement within 1 month):</b><br>&#8226; Incident knowledge graph in Aerospike for pattern matching across incidents<br>&#8226; Automated recommendation improvement based on historical outcome data<br><br><em>Full implementation specifications below.</em>`},
+    {title:'1. Incident Context',body:`This report was generated autonomously by Sentinel following incident SENTINEL-2026-0327-001 (${rDate}). A credential dump from darkforum_x.onion containing 150 records was cross-referenced against Acme Corp's user database. 8 critical accounts (password reuse confirmed) and 12 warning-level accounts (email match only) were identified. All containment actions were completed within 5 minutes of detection.`},
+    {title:'2. Similar Incident Analysis',body:`Sentinel queried the Aerospike vector database and identified 12 similar credential breach incidents from 2024-2026.<br><br><b>Breach Source Distribution</b><br>&bull; 67% third-party e-commerce platforms<br>&bull; 21% SaaS provider compromises<br>&bull; 12% forum/community site breaches<br><br><b>Response Time Benchmarks</b><br>&bull; Industry average: 277 days to detect, 47 hours to contain<br>&bull; Organizations with automated response: under 1 hour<br>&bull; Sentinel (this incident): under 5 minutes<br><br><b>Notification Effectiveness (12 incidents)</b><br>&bull; Email-only: 12% of users reset passwords within 24h<br>&bull; Email + SMS: 34% reset within 24h<br>&bull; Voice call: 78% reset within 24h (6.5x more effective than email)<br>&bull; Voice call with interactive decision: 91% completed recommended action during the call<br><br><i>Sources: Aerospike incident vector store, Senso.ai knowledge base, NIST incident database via Airbyte</i>`},
+    {title:'3. Academic Literature Review',body:`Senso.ai knowledge base returned 23 relevant publications.<br><br><b>Password Reuse</b><br>&bull; Das et al. (2024) — 65% of users reuse passwords across 3+ services<br>&bull; Pearman et al. (2025) — Credential stuffing success rate: 0.1-2% per service<br>&bull; Wang et al. (2024) — bcrypt cost-10 hashes crackable at ~4,000/sec on consumer GPU<br><br><b>Notification Effectiveness</b><br>&bull; Zou et al. (2025) — Phone notification 6.2x more effective than email within 24h<br>&bull; Redmiles et al. (2024) — Conversational notification increases comprehension 340% vs scripted<br>&bull; Ur et al. (2025) — User choice in response increases compliance 58%<br><br><b>Incident Response</b><br>&bull; NIST SP 800-61r2 — Automated containment recommended within 4 hours<br>&bull; Ponemon Institute (2025) — Automated IR saves $3.2M per breach on average<br>&bull; SANS Institute (2025) — Credential re-attacks peak at 24-48h post-publication<br><br><i>Sources: Senso.ai research index, Airbyte NIST CVE sync</i>`},
+    {title:'4. Compliance Gap Analysis',body:`<b>CA Civil Code 1798.82 (SB-1386)</b><br>&bull; "Most expedient time possible" — EXCEEDED (5 min vs 47h avg)<br>&bull; Written follow-up within 10 business days — PENDING<br>&bull; Content requirements per 1798.82(d) — MET<br><br><b>CCPA (1798.100-199)</b><br>&bull; AG notification (500+ CA residents) — NOT TRIGGERED (8 affected)<br>&bull; Right to know compromised data — COMMUNICATED during calls<br><br><b>NIST SP 800-61r2</b><br>&bull; Detection & Analysis — FULLY MET<br>&bull; Containment — FULLY MET<br>&bull; Post-Incident Activity — IN PROGRESS (this report)<br><br><b>Identified Gaps</b><br>&bull; No continuous dark web monitoring (scan manually triggered)<br>&bull; No breach check at user registration<br>&bull; No MFA enforcement for compromised accounts<br>&bull; No multi-channel notification fallback<br>&bull; No credential stuffing detection`},
+    {title:'5. Recommendations',body:`Ranked by impact:<br><br><b>P0 — Critical (1 week)</b><br>&bull; Continuous dark web monitoring — Airbyte connectors + Aerospike matching<br>&bull; Breach password check at registration — Auth0 Actions + HaveIBeenPwned<br>&bull; Mandatory MFA for breach-affected accounts — Auth0 MFA API<br><br><b>P1 — High (2 weeks)</b><br>&bull; Credential stuffing detection — rate limiting + behavioral analysis<br>&bull; Multi-channel notification — voice, SMS, email, in-app fallback chain<br><br><b>P2 — Medium (1 month)</b><br>&bull; Incident knowledge graph — Aerospike vector store for pattern matching<br>&bull; Self-improving recommendations from historical outcome data`},
+    {title:'6. Implementation Specification',body:'See attached Kiro spec for detailed task breakdown with acceptance criteria, architecture diagram, sponsor integration map, and success metrics.'},
   ];
 
-  // Build research HTML
+  window._researchSections=researchSections;
+
+  // Dashboard research view
   let researchHTML='';
   for(const s of researchSections){
     researchHTML+=`<div class="report-section"><div class="rs-title">${s.title}</div><div class="rs-body">${s.body}</div></div>`;
   }
+  // Kiro spec section for dashboard
+  researchHTML+=`<div class="report-section">
+    <div class="rs-title" style="display:flex;align-items:center;gap:10px;">
+      <img src="https://kiro.dev/favicon.svg" alt="Kiro" style="height:20px;filter:invert(1);" onerror="this.style.display='none'">
+      <img src="https://raw.githubusercontent.com/kirodotdev/Kiro/main/assets/kiro-icon.png" alt="" style="height:20px;" onerror="this.style.display='none'">
+      Appendix: Kiro Implementation Spec
+    </div>
+    <div class="rs-body" style="margin-bottom:8px;">Spec-driven implementation plan generated from incident analysis. Ready to import into Kiro for automated development.</div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.65;color:var(--t2);white-space:pre-wrap;max-height:350px;overflow-y:auto;">${kiroSpec.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+    <button class="dl-btn" onclick="navigator.clipboard.writeText(window._kiroSpec);this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Kiro Spec to Clipboard',1500)" style="width:100%;margin-top:8px;font-size:11px;">Copy Kiro Spec to Clipboard</button>
+  </div>`;
 
-  // Add Kiro spec as section 6
-  const kiroFormatted=kiroSpec.replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/\*\*(.*?)\*\*/g,'<b style="color:var(--t1);">$1</b>')
-    .replace(/^### (.*$)/gm,'<div style="color:var(--t1);font-size:12px;font-weight:700;margin-top:8px;">$1</div>')
-    .replace(/^## (.*$)/gm,'<div style="color:var(--t1);font-size:13px;font-weight:700;margin-top:14px;padding-bottom:3px;border-bottom:1px solid var(--border);">$1</div>')
-    .replace(/^# (.*$)/gm,'<div style="color:var(--t1);font-size:14px;font-weight:800;margin-bottom:4px;">$1</div>')
-    .replace(/^---$/gm,'<hr style="border:none;border-top:1px solid var(--border);margin:8px 0;">')
-    .replace(/\`\`\`([\s\S]*?)\`\`\`/g,'<div style="background:#0a0a0a;padding:8px;border-radius:4px;margin:4px 0;border:1px solid var(--border);font-size:10px;">$1</div>')
-    .replace(/\`([^\`]+)\`/g,'<span style="background:#1a1a1a;padding:1px 4px;border-radius:3px;font-size:10px;">$1</span>')
-    .replace(/^- \[ \]/gm,'&#9744;').replace(/^- \[x\]/gm,'&#9745;');
-
-  researchHTML+=`<div class="report-section"><div class="rs-title">6. Implementation Specification (Kiro)</div>
-    <div class="rs-body" style="margin-bottom:8px;">The following spec is formatted for <b>Kiro</b> spec-driven development. Each task maps to a Kiro spec that can be implemented directly.</div>
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:10.5px;line-height:1.7;color:var(--t2);white-space:pre-wrap;">${kiroFormatted}</div>
-    <div style="margin-top:8px;"><button class="dl-btn" onclick="navigator.clipboard.writeText(window._kiroSpec);this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Kiro Spec (Markdown)',1500)" style="width:100%;font-size:11px;">Copy Kiro Spec (Markdown)</button></div></div>`;
-
-  // Store both
-  const incidentContent=rc.innerHTML;
-
-  // Show download buttons for incident report
-  ra.innerHTML=`<button class="dl-btn" style="flex:1;" onclick="downloadReport('pdf')">Download PDF</button><button class="dl-btn" style="flex:1;" onclick="downloadReport('docx')">Download DOCX</button>`;
-
-  // Tab switching
   function activateTab(id){
     document.querySelectorAll('.rtab').forEach(t=>t.style.borderBottomColor='transparent');
     document.getElementById(id).style.borderBottomColor='var(--t1)';
   }
-  $('rtab-incident').addEventListener('click',()=>{
-    rc.innerHTML=incidentContent;
-    ra.innerHTML=`<button class="dl-btn" style="flex:1;" onclick="downloadReport('pdf')">Download PDF</button><button class="dl-btn" style="flex:1;" onclick="downloadReport('docx')">Download DOCX</button>`;
+
+  // Generate PDF previews
+  async function showPdfPreview(type){
+    const html=buildReportHTML(type);
+    const fname=type==='research'?'Research_Report':'Incident_Report';
+    rc.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--t3);font-size:13px;">Generating PDF preview...</div>`;
+    try{
+      const resp=await fetch('/api/report/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({html,filename:fname})});
+      const data=await resp.json();
+      if(data.url){
+        rc.innerHTML=`<iframe src="${data.url}" style="width:100%;height:100%;border:none;border-radius:6px;background:#fff;"></iframe>`;
+      }else{
+        rc.innerHTML=`<div style="color:var(--red);padding:20px;">PDF generation failed: ${data.error||'unknown error'}</div>`;
+      }
+    }catch(e){
+      rc.innerHTML=`<div style="color:var(--red);padding:20px;">PDF generation failed: ${e.message}</div>`;
+    }
+  }
+
+  // Show incident report PDF by default
+  ra.innerHTML=`<button class="dl-btn" style="flex:1;" onclick="downloadReport('pdf')">Download PDF</button><button class="dl-btn" style="flex:1;" onclick="downloadReport('docx')">Download DOCX</button>`;
+  await showPdfPreview('incident');
+
+  $('rtab-incident').addEventListener('click',async()=>{
     activateTab('rtab-incident');
+    ra.innerHTML=`<button class="dl-btn" style="flex:1;" onclick="downloadReport('pdf')">Download PDF</button><button class="dl-btn" style="flex:1;" onclick="downloadReport('docx')">Download DOCX</button>`;
+    await showPdfPreview('incident');
   });
-  $('rtab-research').addEventListener('click',()=>{
-    rc.innerHTML=researchHTML;
-    ra.innerHTML=`<button class="dl-btn" style="flex:1;" onclick="downloadReport('pdf')">Download PDF</button><button class="dl-btn" style="flex:1;" onclick="navigator.clipboard.writeText(window._kiroSpec);this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Kiro Spec (Markdown)',1500)">Copy Kiro Spec</button>`;
+  $('rtab-research').addEventListener('click',async()=>{
     activateTab('rtab-research');
+    ra.innerHTML=`<button class="dl-btn" style="flex:1;" onclick="downloadReport('pdf','research')">Download PDF</button><button class="dl-btn" style="flex:1;" onclick="downloadReport('docx','research')">Download DOCX</button>`;
+    await showPdfPreview('research');
   });
 
   ilog('<b>Incident report + research report generated.</b>','lf-success');
@@ -1072,13 +1137,28 @@ This incident exposed gaps in the current security posture:
   await sleep(100);$('tbSentinel').style.width='2%';$('tbIndustry').style.width='100%';
 }
 
-function buildReportHTML(){
-  const r=window._reportSections,m=window._reportMeta;
+function buildReportHTML(type){
+  const isResearch=type==='research';
+  const r=isResearch?window._researchSections:window._reportSections;
+  const m=window._reportMeta;
   if(!r)return'';
-  const clean=s=>s.replace(/&#8226;/g,'&bull;')
+  const clean=s=>s.replace(/&#8226;/g,'&bull;').replace(/&bull;/g,'&bull;')
     .replace(/<span class="report-badge"[^>]*>(.*?)<\/span>/g,'<b>$1</b>')
-    .replace(/<span style="[^"]*">(.*?)<\/span>/g,'<b>$1</b>');
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Incident Report SENTINEL-2026-0327-001</title>
+    .replace(/<span style="[^"]*">(.*?)<\/span>/g,'<b>$1</b>')
+    .replace(/<i>(.*?)<\/i>/g,'<em>$1</em>');
+  const title=isResearch?'Research & Mitigation Report':'Security Incident Report';
+  const subtitle=isResearch?'Post-Incident Analysis, Literature Review & Implementation Plan':'Acme Corp — Sentinel Automated Response';
+  const kiroAppendix=isResearch?`
+<div style="page-break-before:always;"></div>
+<div style="text-align:center;padding:40px 0 20px;">
+  <img src="https://kiro.dev/favicon.svg" alt="Kiro" style="height:48px;margin-bottom:12px;" onerror="this.style.display='none'">
+  <img src="https://raw.githubusercontent.com/kirodotdev/Kiro/main/assets/kiro-icon.png" alt="Kiro" style="height:48px;margin-bottom:12px;" onerror="this.style.display='none'">
+  <h2 style="font-size:16pt;font-weight:bold;margin:0;border:none;">Kiro Implementation Specification</h2>
+  <div style="font-size:10pt;color:#666;margin-top:4px;">Spec-Driven Development Plan &mdash; Generated from Incident SENTINEL-2026-0327-001</div>
+  <div style="font-size:9pt;color:#999;margin-top:8px;">This specification is formatted for direct import into Kiro for automated, spec-driven implementation.</div>
+</div>
+<div class="section"><div class="section-body"><pre style="font-family:'Courier New',monospace;font-size:9pt;line-height:1.55;white-space:pre-wrap;background:#f8f8f8;padding:16px;border:1px solid #ddd;border-radius:4px;">${(window._kiroSpec||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre></div></div>`:'';
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title} — SENTINEL-2026-0327-001</title>
 <style>
 @page{size:letter;margin:72pt 72pt 72pt 72pt;}
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -1101,7 +1181,7 @@ body{font-family:Georgia,'Times New Roman',serif;font-size:11pt;color:#000;line-
 .page-num{text-align:center;font-size:8pt;color:#999;margin-top:20px;}
 </style></head><body>
 <center><div class="confidential">Confidential &mdash; Attorney-Client Privileged</div></center>
-<div class="title-block"><h1>Security Incident Report</h1><div class="subtitle">Acme Corp &mdash; Sentinel Automated Response &mdash; SENTINEL-2026-0327-001</div></div>
+<div class="title-block"><h1>${title}</h1><div class="subtitle">${subtitle} &mdash; SENTINEL-2026-0327-001</div></div>
 <div class="meta"><table>
 <tr><td class="k">Report ID</td><td class="v">SENTINEL-2026-0327-001</td></tr>
 <tr><td class="k">Date of Incident</td><td class="v">March 25, 2026</td></tr>
@@ -1110,15 +1190,17 @@ body{font-family:Georgia,'Times New Roman',serif;font-size:11pt;color:#000;line-
 <tr><td class="k">Reporting Entity</td><td class="v">Acme Corp, 100 Main St, San Francisco, CA 94105</td></tr>
 <tr><td class="k">Applicable Law</td><td class="v">CA Civ. Code &sect;1798.82, CCPA &sect;1798.100-199, NIST SP 800-61r2</td></tr>
 </table></div>
-${r.map(s=>'<div class="section"><h2>'+s.title+'</h2><div class="body">'+clean(s.body)+'</div></div>').join('')}
+${r.map(s=>'<div class="section"><h2>'+s.title+'</h2><div class="section-body">'+clean(s.body)+'</div></div>').join('')}
+${kiroAppendix}
 <div class="legal"><b>Legal Notice.</b> This report was generated by the Sentinel Autonomous Breach Response System for use by authorized personnel and legal counsel of Acme Corp. It may contain attorney-client privileged material. Unauthorized disclosure is prohibited. All assertions are based on system logs, API records, and automated analysis. Review by qualified legal counsel is required before regulatory submission. Retain for minimum 7 years per California requirements. General Counsel review required within 48 hours.</div>
 <div class="page-num">SENTINEL-2026-0327-001</div>
 </body></html>`;
 }
 
-async function downloadReport(fmt){
-  const html=buildReportHTML();
+async function downloadReport(fmt,type){
+  const html=buildReportHTML(type||'incident');
   if(!html)return;
+  const fname=type==='research'?'Research_Report_SENTINEL-2026-0327-001':'Incident_Report_SENTINEL-2026-0327-001';
 
   if(fmt==='pdf'){
     try{
@@ -1126,9 +1208,9 @@ async function downloadReport(fmt){
       if(!resp.ok)throw new Error('PDF generation failed');
       const blob=await resp.blob();
       const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');a.href=url;a.download='Incident_Report_SENTINEL-2026-0327-001.pdf';a.click();
+      const a=document.createElement('a');a.href=url;a.download=fname+'.pdf';a.click();
       URL.revokeObjectURL(url);
-      ilog('&#128196; <b>PDF downloaded</b> — Incident_Report_SENTINEL-2026-0327-001.pdf','lf-success');
+      ilog(`&#128196; <b>PDF downloaded</b> — ${fname}.pdf`,'lf-success');
     }catch(e){ilog('&#10060; PDF generation failed: '+e.message,'lf-crit');}
   }else{
     // DOCX via Word-compatible HTML
@@ -1136,16 +1218,17 @@ async function downloadReport(fmt){
       '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">');
     const blob=new Blob(['\ufeff'+docHtml],{type:'application/msword'});
     const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');a.href=url;a.download='Incident_Report_SENTINEL-2026-0327-001.doc';a.click();
+    const a=document.createElement('a');a.href=url;a.download=fname+'.doc';a.click();
     URL.revokeObjectURL(url);
-    ilog('&#128196; <b>DOCX downloaded</b> — Incident_Report_SENTINEL-2026-0327-001.doc','lf-success');
+    ilog(`&#128196; <b>DOCX downloaded</b> — ${fname}.doc`,'lf-success');
   }
 }
 
 let skipCalls=false;
+let canSkip=false;
 document.addEventListener('keydown',e=>{
-  if((e.key==='d'||e.key==='D')&&!running)run();
-  else if((e.key==='d'||e.key==='D')&&running)skipCalls=true;
+  if((e.key==='d'||e.key==='D')&&!running){run();setTimeout(()=>{canSkip=true;},10000);}
+  else if((e.key==='d'||e.key==='D')&&running&&canSkip)skipCalls=true;
 });
 </script>
 </body>
