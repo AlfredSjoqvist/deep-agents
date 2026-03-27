@@ -5,6 +5,7 @@ Endpoints:
     GET  /api/events/{run_id}  - SSE event stream
     GET  /api/status/{run_id}  - Current pipeline status + result
     GET  /api/integrations     - Real integration health checks
+    POST /api/research         - Deep research: CVE search, analysis, remediation
     POST /api/call             - Trigger a Bland AI test call
     GET  /api/health           - Health check
 """
@@ -19,6 +20,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 import structlog
+from pydantic import BaseModel, Field
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from sse_starlette.sse import EventSourceResponse
@@ -398,6 +400,58 @@ async def check_integrations():
         ))
 
     return IntegrationsResponse(integrations=statuses)
+
+
+class ResearchRequest(BaseModel):
+    """Body for POST /api/research — trigger deep research on a breach."""
+    breach_source: str = Field(default="DarkForum X", description="Name of the breach source")
+    incident_summary: str = Field(default="", description="Human-readable incident summary")
+    total_leaked: int = Field(default=0, description="Total leaked credentials (parsed from summary if 0)")
+    critical_count: int = Field(default=0, description="Critical matches count (parsed from summary if 0)")
+    matched_emails: list[str] | None = Field(default=None, description="Optional list of matched emails")
+
+
+@app.post("/api/research")
+async def research_breach(body: ResearchRequest):
+    """Run the deep research pipeline on a breach source.
+
+    Searches NVD for real CVEs, queries security knowledge bases, and
+    produces a comprehensive incident report with remediation steps.
+    """
+    import re
+
+    # Parse total_leaked and critical_count from incident_summary if not provided
+    total_leaked = body.total_leaked
+    critical_count = body.critical_count
+
+    if body.incident_summary:
+        if total_leaked == 0:
+            match = re.search(r"(\d+)\s*(?:leaked|credentials|records|entries)", body.incident_summary, re.IGNORECASE)
+            if match:
+                total_leaked = int(match.group(1))
+        if critical_count == 0:
+            match = re.search(r"(\d+)\s*(?:critical|reuse|reused)", body.incident_summary, re.IGNORECASE)
+            if match:
+                critical_count = int(match.group(1))
+
+    # Default to reasonable numbers if still zero
+    if total_leaked == 0:
+        total_leaked = 100
+
+    try:
+        from sentinel.agent.deep_researcher import deep_research
+
+        report = await deep_research(
+            breach_source=body.breach_source,
+            total_leaked=total_leaked,
+            critical_count=critical_count,
+            matched_emails=body.matched_emails,
+        )
+        return report
+
+    except Exception as exc:
+        log.exception("api.research_failed", breach_source=body.breach_source)
+        raise HTTPException(status_code=500, detail=f"Research pipeline failed: {exc}")
 
 
 @app.post("/api/call", response_model=CallResponse)
