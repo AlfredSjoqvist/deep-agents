@@ -327,6 +327,65 @@ async def run_sentinel(
             "incident_type": result.incident_type,
         })
 
+        # ── Phase 2b: Compliance Analysis ─────────────────────────
+        try:
+            from sentinel.agent.compliance import analyze_compliance
+
+            data_classes = getattr(report, "data_classes_exposed", None) or ["credentials", "PII"]
+            incident_type_str = getattr(report, "incident_type", "unknown")
+            compliance_result = analyze_compliance(
+                data_classes=data_classes,
+                incident_type=incident_type_str,
+                record_count=count,
+            )
+            result.incident_report["compliance"] = compliance_result
+
+            # Build a human-readable compliance summary for the event
+            frameworks = [
+                fw["framework"]
+                for fw in compliance_result.get("applicable_frameworks", [])
+            ]
+            deadlines = [
+                f"{fw['framework']} ({fw['notification_deadline']})"
+                for fw in compliance_result.get("applicable_frameworks", [])
+                if fw.get("notification_deadline")
+            ]
+            compliance_summary = {
+                "frameworks_triggered": frameworks,
+                "overall_risk": compliance_result.get("overall_risk", "UNKNOWN"),
+                "most_urgent_deadline": compliance_result.get("most_urgent_deadline", "N/A"),
+                "total_frameworks": compliance_result.get("total_frameworks_triggered", 0),
+                "deadlines": deadlines,
+            }
+
+            deadline_parts = []
+            if "GDPR" in frameworks:
+                deadline_parts.append("GDPR (72h)")
+            if "CCPA" in frameworks:
+                deadline_parts.append("CCPA triggered")
+            if "HIPAA" in frameworks:
+                deadline_parts.append("HIPAA triggered")
+            if "PCI_DSS" in frameworks:
+                deadline_parts.append("PCI-DSS (24h)")
+            compliance_msg = ", ".join(deadline_parts) if deadline_parts else "No frameworks triggered"
+
+            await _emit(
+                run_id,
+                "compliance",
+                f"Compliance analysis: {compliance_msg}",
+                phase="research",
+                data=compliance_summary,
+            )
+        except Exception as e:
+            log.warning("orchestrator.compliance_failed", error=str(e))
+            await _emit(
+                run_id,
+                "compliance",
+                f"Compliance analysis failed: {e}",
+                phase="research",
+                data={"error": str(e)},
+            )
+
         # ── Phase 3: Respond ──────────────────────────────────────
         await _emit(run_id, "lockdown", "Locking compromised accounts via Auth0...", phase="respond")
         lock_results = await _lock_accounts_concurrent(matches)

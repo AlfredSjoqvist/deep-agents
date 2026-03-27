@@ -5,9 +5,11 @@ incident report a security team can act on.
 Pipeline:
     1. Initial Classification (Claude)
     2. Web Search (NVD CVE API + security advisories)
+    2b. OWASP Reference Lookup
     3. Context Enrichment (Senso knowledge base)
     4. Analysis & Synthesis (Claude)
-    5. Persistence (Ghost DB)
+    5. Compliance Analysis
+    6. Persistence (Ghost DB)
 """
 
 from __future__ import annotations
@@ -29,6 +31,84 @@ log = structlog.get_logger()
 
 # NVD CVE 2.0 API — free, no key required
 NVD_API_BASE = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+
+# ── OWASP Reference Data ──────────────────────────────────────────────────
+
+OWASP_REFERENCES: dict[str, list[dict[str, str]]] = {
+    "credential_stuffing": [
+        {
+            "title": "OWASP Credential Stuffing Prevention",
+            "url": "https://cheatsheetseries.owasp.org/cheatsheets/Credential_Stuffing_Prevention_Cheat_Sheet.html",
+            "source": "OWASP",
+        },
+        {
+            "title": "OWASP Authentication Cheat Sheet",
+            "url": "https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html",
+            "source": "OWASP",
+        },
+    ],
+    "phishing": [
+        {
+            "title": "OWASP Phishing Prevention",
+            "url": "https://owasp.org/www-community/attacks/Phishing",
+            "source": "OWASP",
+        },
+        {
+            "title": "OWASP Social Engineering Prevention",
+            "url": "https://cheatsheetseries.owasp.org/cheatsheets/Phishing_Prevention_Cheat_Sheet.html",
+            "source": "OWASP",
+        },
+    ],
+    "sql_injection": [
+        {
+            "title": "OWASP SQL Injection Prevention",
+            "url": "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html",
+            "source": "OWASP",
+        },
+        {
+            "title": "OWASP Testing for SQL Injection",
+            "url": "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05-Testing_for_SQL_Injection",
+            "source": "OWASP",
+        },
+    ],
+}
+
+# ── Incident-specific reference data ──────────────────────────────────────
+
+_INCIDENT_SPECIFIC_REFERENCES: dict[str, list[dict[str, str]]] = {
+    "credential_stuffing": [
+        {
+            "title": "HaveIBeenPwned",
+            "url": "https://haveibeenpwned.com/",
+            "source": "Community",
+        },
+    ],
+    "phishing": [
+        {
+            "title": "CISA Phishing Guidance",
+            "url": "https://www.cisa.gov/topics/cybersecurity-best-practices/phishing",
+            "source": "CISA",
+        },
+    ],
+}
+
+_INCIDENT_SPECIFIC_CONTEXT: dict[str, str] = {
+    "credential_stuffing": (
+        "\n\nINCIDENT-SPECIFIC CONTEXT (credential stuffing):\n"
+        "- Reference the 23andMe 2023 breach where credential stuffing exposed 6.9 million user profiles "
+        "through data-sharing features that amplified the blast radius beyond directly compromised accounts.\n"
+        "- HaveIBeenPwned (https://haveibeenpwned.com/) is a key resource for checking whether credentials "
+        "appeared in known breaches.\n"
+        "- Credential stuffing attacks exploit password reuse across services; MFA is the primary defense."
+    ),
+    "phishing": (
+        "\n\nINCIDENT-SPECIFIC CONTEXT (phishing):\n"
+        "- CISA provides comprehensive phishing guidance at https://www.cisa.gov/topics/cybersecurity-best-practices/phishing\n"
+        "- Phishing is consistently the #1 initial access vector in data breaches (Verizon DBIR).\n"
+        "- Organizations should implement SPF, DKIM, and DMARC email authentication, "
+        "along with user awareness training and link-rewriting/sandboxing."
+    ),
+}
 
 # ── Event emission ──────────────────────────────────────────────────────────
 
@@ -204,9 +284,19 @@ async def _search_nvd(keyword: str, results_per_page: int = 5) -> list[dict]:
                                         version = parts[5] if len(parts) > 5 else "*"
                                         affected_products.append(f"{vendor}/{product} {version}")
 
-                    # Extract references
-                    references = cve_data.get("references", [])
-                    ref_urls = [ref.get("url", "") for ref in references[:5]]
+                    # Extract references as structured objects with real URLs
+                    raw_references = cve_data.get("references", [])
+                    ref_urls = [ref.get("url", "") for ref in raw_references[:5]]
+                    structured_refs: list[dict[str, str]] = []
+                    for ref in raw_references[:5]:
+                        ref_url = ref.get("url", "")
+                        ref_source = ref.get("source", "NVD Reference")
+                        if ref_url:
+                            structured_refs.append({
+                                "title": f"{cve_id} Reference ({ref_source})",
+                                "url": ref_url,
+                                "source": "NVD Reference",
+                            })
 
                     # Published and modified dates
                     published = cve_data.get("published", "")
@@ -220,6 +310,8 @@ async def _search_nvd(keyword: str, results_per_page: int = 5) -> list[dict]:
                         "cvss_vector": cvss_vector,
                         "affected_products": affected_products[:10],
                         "references": ref_urls,
+                        "structured_references": structured_refs,
+                        "nvd_url": f"https://nvd.nist.gov/vuln/detail/{cve_id}" if cve_id else "",
                         "published": published,
                         "last_modified": last_modified,
                     })
@@ -266,6 +358,23 @@ async def _search_all_nvd(queries: list[str], run_id: str | None) -> list[dict]:
     return all_cves
 
 
+# ── Step 2b: OWASP Reference Lookup ──────────────────────────────────────
+
+def _search_owasp(attack_type: str) -> list[dict]:
+    """Return relevant OWASP references for a given attack type.
+
+    Uses a static mapping of incident types to stable OWASP URLs.
+
+    Args:
+        attack_type: The classified incident type string
+                     (e.g. "credential_stuffing", "phishing", "sql_injection").
+
+    Returns:
+        A list of reference dicts with title, url, and source keys.
+    """
+    return list(OWASP_REFERENCES.get(attack_type, []))
+
+
 # ── Step 3: Senso Context Enrichment ────────────────────────────────────────
 
 async def _enrich_with_senso(
@@ -308,6 +417,55 @@ async def _enrich_with_senso(
     return context_text
 
 
+# ── Reference collection helpers ─────────────────────────────────────────
+
+def _collect_references(
+    cves: list[dict],
+    incident_type: str,
+) -> list[dict[str, str]]:
+    """Build a deduplicated list of structured references from all sources.
+
+    Combines NVD CVE detail URLs, NVD reference URLs from API responses,
+    OWASP references, and incident-specific references.
+
+    Returns:
+        A list of dicts with title, url, and source keys.
+    """
+    refs: list[dict[str, str]] = []
+    seen_urls: set[str] = set()
+
+    def _add(ref: dict[str, str]) -> None:
+        url = ref.get("url", "")
+        if url and url not in seen_urls:
+            seen_urls.add(url)
+            refs.append(ref)
+
+    # 1. NVD CVE detail pages and reference URLs from API response
+    for cve in cves[:10]:
+        cve_id = cve.get("cve_id", "")
+        nvd_url = cve.get("nvd_url", "")
+        if nvd_url:
+            _add({
+                "title": f"{cve_id} Detail",
+                "url": nvd_url,
+                "source": "NVD",
+            })
+        # Include actual reference URLs from the NVD API response
+        for sref in cve.get("structured_references", []):
+            _add(sref)
+
+    # 2. OWASP references
+    owasp_refs = _search_owasp(incident_type)
+    for oref in owasp_refs:
+        _add(oref)
+
+    # 3. Incident-specific references
+    for iref in _INCIDENT_SPECIFIC_REFERENCES.get(incident_type, []):
+        _add(iref)
+
+    return refs
+
+
 # ── Step 4: Analysis & Synthesis ────────────────────────────────────────────
 
 async def _synthesize_report(
@@ -324,6 +482,8 @@ async def _synthesize_report(
 
     await _emit(run_id, "research", "Analyzing attack patterns...")
 
+    incident_type = classification.get("incident_type", "unknown")
+
     # Build CVE context for the prompt
     cve_details = ""
     if cves:
@@ -335,6 +495,8 @@ async def _synthesize_report(
             entry += f": {cve['description'][:300]}"
             if cve.get("affected_products"):
                 entry += f"\n  Affected: {', '.join(cve['affected_products'][:5])}"
+            if cve.get("nvd_url"):
+                entry += f"\n  NVD: {cve['nvd_url']}"
             if cve.get("references"):
                 entry += f"\n  Refs: {cve['references'][0]}"
             cve_entries.append(entry)
@@ -344,6 +506,16 @@ async def _synthesize_report(
     if matched_emails:
         domains = list({e.split("@")[1] for e in matched_emails[:50] if "@" in e})
         email_domains = f"\n- Affected email domains: {', '.join(domains[:15])}"
+
+    # Build OWASP context section
+    owasp_refs = _search_owasp(incident_type)
+    owasp_section = ""
+    if owasp_refs:
+        owasp_lines = [f"- {r['title']}: {r['url']}" for r in owasp_refs]
+        owasp_section = f"\n\nOWASP REFERENCES:\n" + "\n".join(owasp_lines)
+
+    # Add incident-specific context for the LLM prompt
+    incident_context = _INCIDENT_SPECIFIC_CONTEXT.get(incident_type, "")
 
     prompt = f"""You are a senior cybersecurity incident analyst producing a comprehensive incident report.
 
@@ -360,8 +532,8 @@ CLASSIFICATION (from initial analysis):
 
 REAL CVE DATA FROM NVD:
 {cve_details if cve_details else "No CVEs found in NVD search."}
-
-{f"SECURITY CONTEXT FROM KNOWLEDGE BASE:{chr(10)}{senso_context_text}" if senso_context_text else ""}
+{owasp_section}
+{f"SECURITY CONTEXT FROM KNOWLEDGE BASE:{chr(10)}{senso_context_text}" if senso_context_text else ""}{incident_context}
 
 Based on ALL the above data, produce a comprehensive incident report. If real CVEs were found, use them.
 If no exact CVE match exists, identify the most relevant CVE from the search results and explain how it
@@ -484,6 +656,7 @@ def _build_fallback_report(
                 "patched_version": "See vendor advisory",
             })
 
+    # Build flat reference URL list for the report body (legacy format)
     references = []
     for cve in cves[:5]:
         references.extend(cve.get("references", [])[:2])
@@ -613,7 +786,7 @@ async def deep_research(
 
     Returns:
         A comprehensive incident report dict with CVE details, attack analysis,
-        remediation plan, and references.
+        remediation plan, compliance analysis, and references.
     """
     start = time.monotonic()
 
@@ -656,6 +829,16 @@ async def deep_research(
     else:
         await _emit(run_id, "research", "No exact CVE matches found in NVD. Will use LLM analysis.")
 
+    # ── Step 2b: OWASP References ──────────────────────────────────
+    owasp_refs = _search_owasp(incident_type)
+    if owasp_refs:
+        await _emit(
+            run_id,
+            "research",
+            f"Found {len(owasp_refs)} OWASP references for {incident_type}.",
+            data={"owasp_count": len(owasp_refs)},
+        )
+
     # ── Step 3: Senso Context Enrichment ────────────────────────────
     await _emit(run_id, "research", "Checking security knowledge base...")
 
@@ -673,12 +856,48 @@ async def deep_research(
         run_id=run_id,
     )
 
+    # ── Attach structured references ────────────────────────────────
+    # Build a proper references array with title, url, source structure
+    structured_refs = _collect_references(cves, incident_type)
+    report["references"] = structured_refs
+
     # Attach raw CVE data so the frontend can display it
     report["_raw_cves"] = cves[:10]
     report["_classification"] = classification
     report["_research_duration_seconds"] = round(time.monotonic() - start, 2)
 
-    # ── Step 5: Persist to Ghost DB ─────────────────────────────────
+    # ── Step 5: Compliance Analysis ─────────────────────────────────
+    await _emit(run_id, "research", "Running compliance analysis...")
+
+    try:
+        from sentinel.agent.compliance import analyze_compliance
+
+        compliance = analyze_compliance(
+            data_classes=report.get("data_classes_exposed", ["credentials", "PII"]),
+            incident_type=report.get("incident_type", "unknown"),
+            record_count=total_leaked,
+        )
+        report["compliance"] = compliance
+
+        frameworks_triggered = compliance.get("total_frameworks_triggered", 0)
+        overall_risk = compliance.get("overall_risk", "UNKNOWN")
+        most_urgent = compliance.get("most_urgent_deadline", "N/A")
+        await _emit(
+            run_id,
+            "compliance",
+            f"Compliance analysis complete: {frameworks_triggered} frameworks triggered, "
+            f"risk={overall_risk}, most urgent deadline={most_urgent}",
+            data={
+                "frameworks_triggered": frameworks_triggered,
+                "overall_risk": overall_risk,
+                "most_urgent_deadline": most_urgent,
+            },
+        )
+    except Exception as e:
+        log.warning("deep_research.compliance_failed", error=str(e))
+        report["compliance"] = {"error": str(e), "applicable_frameworks": []}
+
+    # ── Step 6: Persist to Ghost DB ─────────────────────────────────
     await _store_report(report)
 
     await _emit(
@@ -690,6 +909,7 @@ async def deep_research(
             "incident_type": report.get("incident_type", incident_type),
             "severity": report.get("severity", "HIGH"),
             "duration_seconds": report["_research_duration_seconds"],
+            "references_count": len(structured_refs),
         },
     )
 
@@ -699,6 +919,7 @@ async def deep_research(
         incident_type=report.get("incident_type"),
         cve_count=len(cves),
         severity=report.get("severity"),
+        references_count=len(structured_refs),
         duration=report["_research_duration_seconds"],
     )
 
