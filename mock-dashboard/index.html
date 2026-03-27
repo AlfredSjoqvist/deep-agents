@@ -482,7 +482,7 @@ async function run(){
     'leak.sx','cracked.io','nulled.to','exploit.in','xss.is','breached.vc','telegram/leaks_db',
     'anonfiles.com','mega.nz/dumps','discord/breach-alerts'];
 
-  setLeft(`<div class="slabel">Scanning for Data Breach</div><div class="scan-domains" id="scanDoms"></div><div class="scan-counter" id="scanCount">Scanned: <b>0</b> / ${domains.length} sources</div>`);
+  setLeft(`<div class="slabel">Scanning for Data Breach</div><div class="scan-domains" id="scanDoms"></div><div class="scan-counter" id="scanCount">Scanned: <b>0</b> / ${domains.length} sources</div><div id="scanAlert"></div>`);
   const scanDoms=$('scanDoms'),scanCount=$('scanCount');
 
   for(let i=0;i<domains.length;i++){
@@ -493,16 +493,21 @@ async function run(){
     scanDoms.appendChild(d);scanDoms.scrollTop=scanDoms.scrollHeight;
     scanCount.innerHTML=`Scanned: <b>${i+1}</b> / ${domains.length} sources`;
     if(!isHit) ilog(`&#10003; ${domains[i]} — clean`,'lf-success');
-    if(isHit){ilog(`&#9888; <b>BREACH FOUND on ${domains[i]}</b>  — credential dump detected!`,'lf-crit');await sleep(200);break;}
+    if(isHit){ilog(`&#9888; <b>BREACH FOUND on ${domains[i]}</b> — credential dump detected!`,'lf-crit');await sleep(200);break;}
     await sleep(120);
   }
   await sleep(800);
 
-  // Breach found!
+  // Breach found — append alert below scan results, don't replace
   setBadge('b-red','Breach Found');
-
-  setLeft(`<div class="breach-flash" style="display:flex"><h2 style="color:var(--red);font-size:16px;letter-spacing:2px;">BREACH DETECTED</h2>
-    <div class="detail" style="margin-top:12px;">Credential dump found on <b>darkforum_x.onion</b><br>150 records &mdash; email + bcrypt hash &mdash; e-commerce platform compromise</div></div>`);
+  $('scanAlert').innerHTML=`<div style="margin-top:16px;padding:14px;border:1px solid rgba(239,68,68,.2);border-radius:8px;background:rgba(239,68,68,.04);">
+    <div style="color:var(--red);font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Breach Detected</div>
+    <div style="color:var(--t2);font-size:12px;font-family:'JetBrains Mono',monospace;line-height:1.6;">
+      Source: <b style="color:var(--t1);">darkforum_x.onion</b><br>
+      Records: <b style="color:var(--t1);">150</b> credential pairs (email + bcrypt hash)<br>
+      Origin: Third-party e-commerce platform compromise<br>
+      Status: <span style="color:var(--red);font-weight:600;">Initiating automated response...</span>
+    </div></div>`;
   ilog('&#128680; <b>BREACH DETECTED</b> — 150 credentials on darkforum_x.onion. Initiating response.','lf-crit');
   await sleep(2500);
   saveSnapshot('scan');
@@ -578,7 +583,7 @@ async function run(){
 
   for(const ev of mockEvents){
     const wait=ev.finishAt-mockElapsed;
-    if(wait>0)await sleep(wait*1000);
+    if(wait>0&&!skipCalls)await sleep(wait*1000);
     mockElapsed=ev.finishAt;
     const u=ev.user;
     if(u.noAnswer){
@@ -594,11 +599,11 @@ async function run(){
     }
   }
 
-  // Poll Alfred's real call
+  // Poll Alfred's real call (skip if D pressed)
   let alfredTr=null,alfredLen=null;
-  if(alfredCallId){
+  if(alfredCallId&&!skipCalls){
     ilog(`&#128266; Waiting for <b>${alfred.name}</b> live call to complete...`,'lf-action');
-    for(let p=0;p<60;p++){
+    for(let p=0;p<60&&!skipCalls;p++){
       try{const r=await fetch(`/api/bland/call/${alfredCallId}`,{headers:{'x-bland-key':BLAND_API_KEY}});
         const d=await r.json();
         if(d.status==='completed'||d.status==='ended'||d.queue_status==='complete'||d.completed){
@@ -607,6 +612,7 @@ async function run(){
           break;}}catch(e){}
       await sleep(5000);}
   }
+  if(skipCalls){ilog('Calls skipped — using default responses.','lf-action');}
   setWave(alfred.email,false);setStep(alfred.email,'call','done');setStep(alfred.email,'transcript','done');
   const durD=alfredLen?(alfredLen>60?`${Math.floor(alfredLen/60)}m ${Math.round(alfredLen%60)}s`:`${Math.round(alfredLen)}s`):'?';
   ilog(`&#9989; <b>${alfred.name}</b> — call complete (${durD})`,'lf-success');
@@ -733,45 +739,309 @@ async function run(){
   saveSnapshot('research');
 
   // === REPORT ===
-  setPhase('report');setBadge('b-scan','Generating Report');
-  ilog('<b>Generating CA-compliant incident report (SB-1386 / CCPA)...</b>','lf-action');
-
-  setLeft(`<div class="slabel">Incident Report — CA Civil Code 1798.82 / CCPA Compliant</div><div id="reportContent" style="overflow-y:auto;"></div>`);
-  const rc=$('reportContent');
+  setPhase('report');setBadge('b-scan','Generating Reports');
+  ilog('<b>Generating reports...</b>','lf-action');
 
   const rTime=new Date();
+  const rDate=rTime.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+
+  setLeft(`<div style="display:flex;gap:4px;margin-bottom:12px;">
+    <button class="dl-btn rtab" id="rtab-incident" style="flex:1;font-size:11px;border-bottom:2px solid var(--t1);">Incident Report</button>
+    <button class="dl-btn rtab" id="rtab-research" style="flex:1;font-size:11px;">Research Report</button></div>
+    <div id="reportContent" style="flex:1;overflow-y:auto;"></div>
+    <div id="reportActions" style="margin-top:10px;display:flex;gap:8px;"></div>`);
+
+  const rc=$('reportContent'),ra=$('reportActions');
+
+  // ---- CCPA REPORT ----
   const reportSections=[
-    {title:'1. Executive Summary',body:`<b>Incident ID:</b> SENTINEL-2026-0327-001<br><b>Date of Discovery:</b> ${rTime.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})} at ${rTime.toLocaleTimeString('en-US')}<br><b>Classification:</b> P1 — Credential Breach via Third-Party Compromise<br><b>Breach Source:</b> darkforum_x.onion (compromised e-commerce platform)<br><b>Total Records in Breach:</b> 150 credential pairs (email + bcrypt password hash)<br><b>Acme Corp Users Affected:</b> 8 critical (password reuse confirmed), 12 warning (email match only)<br><b>Time to Containment:</b> Under 5 minutes from detection to full account lockdown<br><b>Reporting Entity:</b> Acme Corp, 100 Main Street, San Francisco, CA 94105`},
-    {title:'2. Nature of the Breach (CA Civ. Code 1798.82(d)(2))',body:`On March 25, 2026, an unauthorized third party gained access to the user database of darkforum_x, a third-party e-commerce platform. The attacker exfiltrated approximately 150 user records containing email addresses and bcrypt-hashed passwords, which were subsequently published on darkforum_x.onion.<br><br>On ${rTime.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}, Sentinel's automated dark web monitoring system detected the published dump and cross-referenced leaked credentials against Acme Corp's user database. <b>8 users were identified as critical</b> — their leaked password hashes matched Acme Corp credentials, confirming password reuse across services.`},
-    {title:'3. Categories of Personal Information (CA Civ. Code 1798.81.5(d))',body:`<b>Compromised data elements:</b><br>&#8226; <b>Email addresses</b> — containing first and last name, constituting personally identifiable information<br>&#8226; <b>Passwords</b> — stored as bcrypt hashes; while not plaintext, these are vulnerable to offline brute-force attacks<br><br><b>NOT compromised in this incident:</b><br>&#8226; Social Security numbers<br>&#8226; Driver's license or state ID numbers<br>&#8226; Financial account, credit, or debit card numbers<br>&#8226; Medical or health insurance information<br>&#8226; Biometric data<br><br>Per CA Civil Code 1798.81.5(d)(1)(A), the combination of email address + password constitutes "personal information" requiring notification when breached.`},
-    {title:'4. Notification of Affected Individuals (CA Civ. Code 1798.82)',body:`<b>Legal Requirement:</b> "The disclosure shall be made in the most expedient time possible and without unreasonable delay" (CA Civ. Code 1798.82(a)).<br><br><b>Method of Initial Notification:</b> Automated AI-assisted voice calls placed to all 8 critical users within 5 minutes of breach detection. Each call was conducted by an AI security agent that:<br>&#8226; Identified itself as Acme Corp security<br>&#8226; Described the nature and scope of the breach<br>&#8226; Informed the user of protective actions already taken<br>&#8226; Obtained the user's preference regarding account status (lock/unlock)<br>&#8226; Directed the user to reset credentials at acme.com/reset<br><br><b>Call Outcomes:</b><br>&#8226; ${8-retries} of 8 users successfully reached and verbally notified<br>&#8226; ${retries} users unreachable — accounts locked precautionarily, retry calls queued<br>&#8226; ${unlocked} user(s) requested immediate account unlock (password reset enforced)<br><br><b>Follow-up Required:</b> Written notification via email and/or postal mail to all affected individuals within 10 business days per CA Civ. Code 1798.82(d). Template notification letter should be reviewed by General Counsel.`},
-    {title:'5. Containment and Remediation Actions',body:`All actions below were executed autonomously by Sentinel with zero human intervention:<br><br><b>Immediate Actions (within 5 minutes of detection):</b><br>&#8226; ${locked} user accounts locked via Auth0 Management API (PATCH /api/v2/users/{id} blocked=true)<br>&#8226; All active sessions revoked for locked accounts (POST /api/v2/users/{id}/sessions/revoke)<br>&#8226; ${unlocked} account(s) unlocked per explicit user request; mandatory password reset enforced on next login<br>&#8226; ${retries} account(s) locked as precautionary measure due to failed contact; automated retry scheduled<br>&#8226; 12 warning-level accounts flagged for enhanced monitoring and password reset prompt on next login<br><br><b>Ongoing Monitoring:</b><br>&#8226; Continuous dark web monitoring for additional data dumps from darkforum_x<br>&#8226; Login anomaly detection enabled for all 20 affected accounts<br>&#8226; Credential stuffing detection on all authentication endpoints`},
-    {title:'6. Risk Assessment and Recommendations (NIST SP 800-61r2)',body:`Based on automated analysis of 12 similar credential breach incidents (2024-2026) and NIST Special Publication 800-61 Revision 2 (Computer Security Incident Handling Guide):<br><br><b>6.1 Maintain Account Locks (72h minimum)</b><br>Analysis shows 89% of credential stuffing attacks using leaked data occur within 48 hours of dump publication. A 72-hour lock window provides adequate protection.<br><br><b>6.2 Deploy Credential Stuffing Detection</b><br>Implement rate limiting and behavioral analysis on login endpoints to detect bulk authentication attempts using known leaked credentials.<br><br><b>6.3 Enforce Multi-Factor Authentication</b><br>Require MFA enrollment as a condition of account reactivation for all affected users. This eliminates future credential reuse risk for these accounts.<br><br><b>6.4 Continuous Source Monitoring (30 days)</b><br>Maintain active monitoring of darkforum_x and related forums for additional data dumps, as breaches often result in multiple partial releases.<br><br><b>6.5 Update Password Policy</b><br>Enforce minimum 12-character passwords with complexity requirements. Integrate breached password checking via HaveIBeenPwned API (k-anonymity model) to prevent known-compromised passwords.`},
-    {title:'7. Attorney General Notification Assessment (CA Civ. Code 1798.82(f))',body:`<b>Statutory Threshold:</b> Notification to the California Attorney General is required when a breach affects more than 500 California residents (CA Civ. Code 1798.82(f)).<br><br><b>Current Impact:</b> 8 confirmed affected users<br><b>Determination:</b> AG notification is <b>NOT REQUIRED</b> at this time as the number of affected California residents is below the 500-person threshold.<br><br><b>Contingency:</b> If additional data dumps are discovered from the same source and the cumulative total of affected California residents exceeds 500, notification to the Attorney General must be submitted within 72 hours via the AG's online breach reporting portal. The notification must include a single sample copy of the notification letter sent to affected individuals.<br><br><b>Regulatory References:</b><br>&#8226; California Civil Code 1798.82 (SB-1386 — Security Breach Notification)<br>&#8226; California Civil Code 1798.81.5 (Definition of Personal Information)<br>&#8226; California Consumer Privacy Act (CCPA) — Civil Code 1798.100-199<br>&#8226; NIST SP 800-61r2 — Computer Security Incident Handling Guide<br>&#8226; NIST SP 800-63B — Digital Identity Guidelines: Authentication and Lifecycle Management`},
-    {title:'8. Document Control',body:`<b>Report ID:</b> SENTINEL-2026-0327-001<br><b>Prepared By:</b> Sentinel Autonomous Breach Response System<br><b>Date Prepared:</b> ${rTime.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}<br><b>Classification:</b> CONFIDENTIAL — Attorney-Client Privileged<br><b>Retention Period:</b> 7 years per California recordkeeping requirements<br><b>Required Review:</b> General Counsel and/or Data Protection Officer within 48 hours<br><b>Distribution:</b> Restricted to Security Team, Legal Department, and Executive Leadership<br><br><em>This report was generated automatically by Sentinel. All factual assertions are based on system logs, API responses, and automated analysis. This document should be reviewed by qualified legal counsel before submission to any regulatory body or use in legal proceedings.</em>`},
+    {title:'1. Executive Summary',body:`<b>Incident ID:</b> SENTINEL-2026-0327-001<br><b>Date of Discovery:</b> ${rDate} at ${rTime.toLocaleTimeString('en-US')}<br><b>Classification:</b> P1 — Credential Breach via Third-Party Compromise<br><b>Breach Source:</b> darkforum_x.onion (compromised e-commerce platform)<br><b>Total Records in Breach:</b> 150 credential pairs (email + bcrypt password hash)<br><b>Acme Corp Users Affected:</b> 8 critical (password reuse confirmed), 12 warning (email match only)<br><b>Time to Containment:</b> Under 5 minutes from detection to full account lockdown<br><b>Reporting Entity:</b> Acme Corp, 100 Main Street, San Francisco, CA 94105`},
+    {title:'2. Nature of the Breach (CA Civ. Code 1798.82(d)(2))',body:`On March 25, 2026, an unauthorized third party gained access to the user database of darkforum_x, a third-party e-commerce platform. The attacker exfiltrated approximately 150 user records containing email addresses and bcrypt-hashed passwords, which were subsequently published on darkforum_x.onion.<br><br>On ${rDate}, Sentinel's automated dark web monitoring system detected the published dump and cross-referenced leaked credentials against Acme Corp's user database. <b>8 users were identified as critical</b> — their leaked password hashes matched Acme Corp credentials, confirming password reuse across services.`},
+    {title:'3. Categories of Personal Information (CA Civ. Code 1798.81.5(d))',body:`<b>Compromised data elements:</b><br>&#8226; <b>Email addresses</b> — containing first and last name, constituting PII<br>&#8226; <b>Passwords</b> — stored as bcrypt hashes; vulnerable to offline brute-force<br><br><b>NOT compromised:</b> SSN, driver's license, financial accounts, medical data, biometric data<br><br>Per CA Civil Code 1798.81.5(d)(1)(A), the combination of email + password constitutes "personal information" requiring notification.`},
+    {title:'4. Notification of Affected Individuals (CA Civ. Code 1798.82)',body:`<b>Requirement:</b> "Disclosure in the most expedient time possible" (CA Civ. Code 1798.82(a)).<br><br><b>Method:</b> Automated AI voice calls to all 8 critical users within 5 minutes. Each call:<br>&#8226; Described the breach nature and scope<br>&#8226; Informed user of protective actions taken<br>&#8226; Obtained user preference on account status (lock/unlock)<br>&#8226; Directed user to reset credentials<br><br><b>Outcomes:</b> ${8-retries} reached, ${retries} unreachable (retry queued), ${unlocked} requested unlock<br><b>Follow-up:</b> Written notification within 10 business days per CA Civ. Code 1798.82(d).`},
+    {title:'5. Containment Actions',body:`Executed autonomously, zero human intervention:<br>&#8226; ${locked} accounts locked via Auth0 Management API<br>&#8226; All active sessions revoked for locked accounts<br>&#8226; ${unlocked} account(s) unlocked per user request; password reset enforced<br>&#8226; ${retries} accounts locked precautionarily; retry scheduled<br>&#8226; 12 warning-level accounts flagged for monitoring`},
+    {title:'6. Recommendations (NIST SP 800-61r2)',body:`<b>6.1</b> Maintain locks 72h minimum (89% of attacks occur within 48h)<br><b>6.2</b> Deploy credential stuffing detection on login endpoints<br><b>6.3</b> Enforce MFA on account reactivation<br><b>6.4</b> Monitor darkforum_x for 30 days for additional dumps<br><b>6.5</b> Enforce 12-char passwords + HaveIBeenPwned integration`},
+    {title:'7. AG Notification (CA Civ. Code 1798.82(f))',body:`<b>Threshold:</b> 500+ CA residents<br><b>Current:</b> 8 affected — <b>BELOW THRESHOLD</b><br><b>AG notification:</b> Not required. If cumulative total exceeds 500, file within 72 hours.`},
+    {title:'8. Document Control',body:`<b>Prepared By:</b> Sentinel Autonomous Breach Response System<br><b>Classification:</b> CONFIDENTIAL — Attorney-Client Privileged<br><b>Retention:</b> 7 years per CA requirements<br><b>Review Required:</b> General Counsel / DPO within 48 hours`},
   ];
 
   for(const s of reportSections){
     const sec=document.createElement('div');sec.className='report-section';
     sec.innerHTML=`<div class="rs-title">${s.title}</div><div class="rs-body">${s.body}</div>`;
     rc.appendChild(sec);
-    ilog(`&#128196; Report section generated: <b>${s.title}</b>`,'lf-action');
-    await sleep(800);
+    ilog(`&#128196; <b>${s.title}</b>`,'lf-action');
+    await sleep(600);
   }
+  ilog('<b>CCPA incident report generated.</b>','lf-success');
 
-  // Add download buttons
-  const dlBar=document.createElement('div');
-  dlBar.style.cssText='margin-top:16px;display:flex;gap:8px;';
-  dlBar.innerHTML=`<button id="dlPdf" class="dl-btn">Download PDF</button><button id="dlDocx" class="dl-btn">Download DOCX</button>`;
-  rc.appendChild(dlBar);
+  // Store CCPA report HTML
+  const ccpaHTML=rc.innerHTML;
 
+  // ---- RESEARCH REPORT (includes Kiro spec) ----
+  ilog('Generating research report...','lf-action');
+  await sleep(1000);
+
+  const kiroSpec=`# Sentinel Security Pipeline — Kiro Implementation Spec
+
+## Overview
+
+**Generated by:** Sentinel Autonomous Breach Response System
+**Date:** ${rDate}
+**Incident:** SENTINEL-2026-0327-001
+**Purpose:** Spec-driven implementation plan to harden the breach response pipeline based on findings from this incident. Designed for Kiro's spec-driven development workflow.
+
+---
+
+## Problem Statement
+
+This incident exposed gaps in the current security posture:
+1. **No proactive credential monitoring** — breach was detected via manual dark web scan trigger
+2. **Password reuse undetectable at signup** — 8 users reused passwords without detection
+3. **No automated MFA enforcement** — compromised accounts had single-factor auth
+4. **Notification relies on phone availability** — 2 of 8 users were unreachable
+5. **No credential stuffing defense** — login endpoints lack behavioral analysis
+
+## Architecture
+
+\`\`\`
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│  Dark Web     │────▶│  Sentinel    │────▶│  Auth0       │
+│  Monitor      │     │  Agent       │     │  Management  │
+│  (Airbyte +   │     │  (Claude +   │     │  API         │
+│   Aerospike)  │     │   Overmind)  │     │              │
+└──────────────┘     └──────┬───────┘     └──────────────┘
+                            │
+                     ┌──────┴───────┐
+                     │              │
+              ┌──────▼──┐   ┌──────▼──────┐
+              │ Bland AI │   │ Ghost DB    │
+              │ Voice    │   │ Incident    │
+              │ Notify   │   │ Store       │
+              └─────────┘   └─────────────┘
+\`\`\`
+
+---
+
+## Implementation Tasks
+
+### Task 1: Continuous Dark Web Monitoring
+**Priority:** P0 — Critical
+**Effort:** 2 days
+**Dependencies:** Airbyte, Aerospike, Ghost DB
+
+#### Requirements
+- Airbyte connector runs every 15 minutes against dark web paste sites and breach databases
+- New credential dumps ingested into Aerospike vector store for fast similarity search
+- Each scan result stored in Ghost DB with timestamp and hash signature
+- Duplicate detection via Aerospike vector similarity (threshold: 0.95)
+- Alert pipeline triggers Sentinel agent on any match above 0 with registered users
+
+#### Acceptance Criteria
+- [ ] Airbyte source connector configured for: pastebin, ghostbin, dehashed, snusbase, breachdb
+- [ ] Aerospike namespace \`breach_vectors\` created with vector index on credential hashes
+- [ ] Ghost DB table \`continuous_scans\` logs every scan with results
+- [ ] End-to-end test: inject test credential dump → Sentinel triggers within 60 seconds
+
+---
+
+### Task 2: Password Breach Check at Registration
+**Priority:** P0 — Critical
+**Effort:** 1 day
+**Dependencies:** Auth0 Actions, HaveIBeenPwned API
+
+#### Requirements
+- Auth0 Action on \`post-registration\` and \`post-change-password\` hooks
+- Check password hash against HaveIBeenPwned API using k-anonymity (SHA-1 prefix)
+- Block registration if password appears in known breaches
+- Log blocked attempts to Ghost DB for security analytics
+
+#### Acceptance Criteria
+- [ ] Auth0 Action deployed and active on both hooks
+- [ ] Password \`password123\` blocked at registration
+- [ ] Clean password \`xK9#mP2$vL7@nQ4\` allowed
+- [ ] Blocked attempts logged with timestamp and anonymized hash prefix
+
+---
+
+### Task 3: Mandatory MFA for Compromised Accounts
+**Priority:** P0 — Critical
+**Effort:** 1 day
+**Dependencies:** Auth0 MFA API
+
+#### Requirements
+- After any breach lockdown, reactivated accounts require MFA enrollment
+- Support TOTP (authenticator app) and SMS as MFA factors
+- Auth0 rule: if user.app_metadata.breach_affected === true → force MFA enrollment
+- MFA enrollment flow integrated into acme.com/reset
+
+#### Acceptance Criteria
+- [ ] User with breach_affected flag cannot access app without MFA
+- [ ] TOTP and SMS enrollment flows functional
+- [ ] Flag automatically set by Sentinel during breach response
+- [ ] Flag cleared after successful MFA enrollment + password reset
+
+---
+
+### Task 4: Credential Stuffing Detection
+**Priority:** P1 — High
+**Effort:** 3 days
+**Dependencies:** Auth0 Attack Protection, Aerospike, Overmind
+
+#### Requirements
+- Rate limiting on /oauth/token: max 10 attempts per IP per minute
+- Behavioral analysis: flag IPs attempting >5 unique usernames in 1 minute
+- Cross-reference login attempts against known leaked credentials in Aerospike
+- Overmind traces on all flagged login attempts for audit trail
+- Auto-block IP + notify security team via Bland AI call if threshold exceeded
+
+#### Acceptance Criteria
+- [ ] Rate limiter active and tested with load tool
+- [ ] Behavioral detector flags bulk username enumeration
+- [ ] Known-leaked credential login attempt triggers alert
+- [ ] Overmind dashboard shows credential stuffing traces
+- [ ] Security team receives automated Bland AI notification on attack detection
+
+---
+
+### Task 5: Multi-Channel Notification Fallback
+**Priority:** P1 — High
+**Effort:** 2 days
+**Dependencies:** Bland AI, Airbyte, Ghost DB
+
+#### Requirements
+- Primary: Bland AI voice call (current implementation)
+- Fallback 1: SMS via Bland AI if voice call fails after 3 attempts
+- Fallback 2: Email notification via SendGrid/SES
+- Fallback 3: In-app banner on next login
+- All notification attempts logged in Ghost DB with channel, timestamp, delivery status
+- Airbyte sync notification logs to analytics warehouse for response rate analysis
+
+#### Acceptance Criteria
+- [ ] Voice call failure triggers SMS within 5 minutes
+- [ ] SMS failure triggers email within 10 minutes
+- [ ] In-app banner shown on next login regardless of other channels
+- [ ] Ghost DB contains complete notification audit trail
+- [ ] Analytics dashboard shows notification success rates by channel
+
+---
+
+### Task 6: Incident Knowledge Graph
+**Priority:** P2 — Medium
+**Effort:** 3 days
+**Dependencies:** Aerospike Vector Search, Senso.ai, Claude
+
+#### Requirements
+- Every incident stored as vector embedding in Aerospike
+- Embedding includes: breach type, source, scale, response actions, outcomes
+- On new incident, vector search retrieves 10 most similar past incidents
+- Claude analyzes patterns and generates incident-specific recommendations
+- Senso.ai knowledge base updated with learnings after each incident
+- Recommendations improve over time as incident corpus grows
+
+#### Acceptance Criteria
+- [ ] Incident SENTINEL-2026-0327-001 stored as vector in Aerospike
+- [ ] Query "credential breach e-commerce" returns this incident in top 3
+- [ ] Claude recommendations reference specific past incident outcomes
+- [ ] Senso.ai knowledge base contains post-incident learnings
+- [ ] Second similar incident produces measurably better recommendations
+
+---
+
+## Sponsor Integration Map
+
+| Component | Sponsor | Role |
+|-----------|---------|------|
+| LLM Reasoning | **Anthropic Claude** | Threat analysis, transcript analysis, recommendations |
+| Dark Web Ingestion | **Airbyte** | 600+ connectors, scheduled breach data sync |
+| Vector Search | **Aerospike** | Similar incident lookup, credential hash matching |
+| Identity & Auth | **Auth0** | Account lock/unlock, MFA, breach password check |
+| Voice Notification | **Bland AI** | Conversational AI calls to affected users |
+| Incident Storage | **Ghost DB** | All incident data, logs, audit trail |
+| Knowledge Base | **Senso.ai** | Mitigation playbooks, learnings, research |
+| Observability | **Overmind** | Agent tracing, decision audit, security monitoring |
+| AI Gateway | **Truefoundry** | LLM routing, rate limiting, cost management |
+| Code Quality | **Macroscope** | Automated PR review, security scanning |
+| Development | **Kiro** | Spec-driven development, task management |
+
+---
+
+## Development Workflow (Kiro Spec-Driven)
+
+1. Each task above maps to a Kiro spec
+2. Kiro generates implementation from spec → developer reviews → merge
+3. Macroscope reviews every PR for security vulnerabilities
+4. Overmind traces agent behavior in staging before production deploy
+5. Post-deploy: Sentinel runs self-test with synthetic breach data
+
+## Success Metrics
+
+| Metric | Current | Target |
+|--------|---------|--------|
+| Detection to containment | <5 min | <2 min |
+| User notification rate | 75% (6/8) | 99% (multi-channel) |
+| Password reuse at signup | Undetected | 0% (blocked) |
+| MFA coverage (post-breach) | 0% | 100% |
+| Credential stuffing detection | None | <30s to block |
+| Incident knowledge base | 0 incidents | Auto-growing |`;
+
+  window._kiroSpec=kiroSpec;
   window._reportSections=reportSections;
   window._reportMeta={date:new Date().toISOString(),locked,unlocked,retries};
 
-  document.getElementById('dlPdf').addEventListener('click',()=>downloadReport('pdf'));
-  document.getElementById('dlDocx').addEventListener('click',()=>downloadReport('docx'));
+  // Build research report HTML
+  const researchSections=[
+    {title:'1. Incident Context',body:`This research report was generated autonomously by Sentinel following incident <b>SENTINEL-2026-0327-001</b> (${rDate}). A credential dump from <b>darkforum_x.onion</b> containing 150 records was matched against Acme Corp's user database, identifying 8 critical and 12 warning-level accounts.`},
+    {title:'2. Similar Incident Analysis',body:`Sentinel queried the Aerospike vector database and identified <b>12 similar credential breach incidents</b> from 2024-2026. Key patterns:<br><br><b>Breach Source Distribution:</b><br>&#8226; 67% originated from third-party e-commerce platforms<br>&#8226; 21% from SaaS provider compromises<br>&#8226; 12% from forum/community site breaches<br><br><b>Response Time Benchmarks:</b><br>&#8226; Industry average: <b>277 days</b> to detect, <b>47 hours</b> to contain<br>&#8226; Organizations with automated response: <b>under 1 hour</b> detection-to-containment<br>&#8226; Sentinel (this incident): <b>under 5 minutes</b><br><br><b>User Notification Effectiveness (from 12 incidents):</b><br>&#8226; Email-only notification: 12% of users reset passwords within 24h<br>&#8226; Email + SMS: 34% reset within 24h<br>&#8226; <b>Voice call notification: 78% reset within 24h</b> (6.5x more effective than email)<br>&#8226; Voice call with interactive decision: 91% completed recommended action during the call<br><br><em>Source: Aerospike incident vector store, Senso.ai knowledge base, NIST incident database via Airbyte</em>`},
+    {title:'3. Academic Literature Review',body:`Senso.ai knowledge base query returned 23 relevant publications. Key findings:<br><br><b>Password Reuse:</b><br>&#8226; Das et al. (2024) — 65% of users reuse passwords across 3+ services<br>&#8226; Pearman et al. (2025) — Credential stuffing success rate: 0.1-2% of leaked credentials work on other services<br>&#8226; Wang et al. (2024) — bcrypt hashes with cost factor 10 can be cracked at ~4,000 hashes/sec on consumer GPU<br><br><b>Notification Effectiveness:</b><br>&#8226; Zou et al. (2025) — Users who receive breach notifications via phone are 6.2x more likely to take action within 24h compared to email<br>&#8226; Redmiles et al. (2024) — Conversational notification (vs. scripted) increases user comprehension by 340%<br>&#8226; Ur et al. (2025) — Giving users choice in response (lock vs. unlock) increases satisfaction and compliance by 58%<br><br><b>Incident Response:</b><br>&#8226; NIST SP 800-61r2 — Recommends automated containment within 4 hours of detection<br>&#8226; Ponemon Institute (2025) — Organizations with automated IR save $3.2M per breach on average<br>&#8226; SANS Institute (2025) — Credential breach re-attacks peak at 24-48h post-publication<br><br><em>Source: Senso.ai research index, Airbyte/NIST CVE sync</em>`},
+    {title:'4. Compliance Gap Analysis',body:`<b>CA Civil Code 1798.82 (SB-1386):</b><br>&#8226; Requirement: "most expedient time possible" — <b>EXCEEDED</b> (5 min vs. industry avg 47h)<br>&#8226; Written follow-up required within 10 business days — <b>PENDING</b><br>&#8226; Content requirements per 1798.82(d) — <b>MET</b> (all required elements communicated verbally)<br><br><b>CCPA (1798.100-199):</b><br>&#8226; AG notification threshold (500 CA residents) — <b>NOT TRIGGERED</b> (8 affected)<br>&#8226; Right to know what data was compromised — <b>COMMUNICATED</b> during voice calls<br><br><b>NIST SP 800-61r2 Compliance:</b><br>&#8226; Preparation phase — Partially met (no continuous monitoring pre-incident)<br>&#8226; Detection & Analysis — <b>FULLY MET</b> (automated dark web scan + credential matching)<br>&#8226; Containment — <b>FULLY MET</b> (account locks within minutes)<br>&#8226; Post-Incident Activity — <b>IN PROGRESS</b> (this report constitutes lessons learned)<br><br><b>Identified Gaps:</b><br>&#8226; No proactive continuous monitoring (scan was manually triggered)<br>&#8226; No credential breach check at user registration<br>&#8226; No MFA enforcement for compromised accounts<br>&#8226; No multi-channel notification fallback<br>&#8226; No automated credential stuffing detection`},
+    {title:'5. Risk Mitigation Recommendations',body:`Based on the above research, ranked by impact and urgency:<br><br><b>P0 — Critical (implement within 1 week):</b><br>&#8226; Continuous dark web monitoring via Airbyte scheduled connectors + Aerospike matching<br>&#8226; Password breach check at registration via Auth0 Actions + HaveIBeenPwned API<br>&#8226; Mandatory MFA enrollment for all breach-affected accounts via Auth0<br><br><b>P1 — High (implement within 2 weeks):</b><br>&#8226; Credential stuffing detection on login endpoints (rate limiting + behavioral analysis)<br>&#8226; Multi-channel notification fallback (voice → SMS → email → in-app)<br><br><b>P2 — Medium (implement within 1 month):</b><br>&#8226; Incident knowledge graph in Aerospike for pattern matching across incidents<br>&#8226; Automated recommendation improvement based on historical outcome data<br><br><em>Full implementation specifications below.</em>`},
+  ];
 
-  ilog('<b>&#128196; Incident report generated.</b> CA SB-1386 + CCPA compliant.','lf-success');
+  // Build research HTML
+  let researchHTML='';
+  for(const s of researchSections){
+    researchHTML+=`<div class="report-section"><div class="rs-title">${s.title}</div><div class="rs-body">${s.body}</div></div>`;
+  }
+
+  // Add Kiro spec as section 6
+  const kiroFormatted=kiroSpec.replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.*?)\*\*/g,'<b style="color:var(--t1);">$1</b>')
+    .replace(/^### (.*$)/gm,'<div style="color:var(--t1);font-size:12px;font-weight:700;margin-top:8px;">$1</div>')
+    .replace(/^## (.*$)/gm,'<div style="color:var(--t1);font-size:13px;font-weight:700;margin-top:14px;padding-bottom:3px;border-bottom:1px solid var(--border);">$1</div>')
+    .replace(/^# (.*$)/gm,'<div style="color:var(--t1);font-size:14px;font-weight:800;margin-bottom:4px;">$1</div>')
+    .replace(/^---$/gm,'<hr style="border:none;border-top:1px solid var(--border);margin:8px 0;">')
+    .replace(/\`\`\`([\s\S]*?)\`\`\`/g,'<div style="background:#0a0a0a;padding:8px;border-radius:4px;margin:4px 0;border:1px solid var(--border);font-size:10px;">$1</div>')
+    .replace(/\`([^\`]+)\`/g,'<span style="background:#1a1a1a;padding:1px 4px;border-radius:3px;font-size:10px;">$1</span>')
+    .replace(/^- \[ \]/gm,'&#9744;').replace(/^- \[x\]/gm,'&#9745;');
+
+  researchHTML+=`<div class="report-section"><div class="rs-title">6. Implementation Specification (Kiro)</div>
+    <div class="rs-body" style="margin-bottom:8px;">The following spec is formatted for <b>Kiro</b> spec-driven development. Each task maps to a Kiro spec that can be implemented directly.</div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:10.5px;line-height:1.7;color:var(--t2);white-space:pre-wrap;">${kiroFormatted}</div>
+    <div style="margin-top:8px;"><button class="dl-btn" onclick="navigator.clipboard.writeText(window._kiroSpec);this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Kiro Spec (Markdown)',1500)" style="width:100%;font-size:11px;">Copy Kiro Spec (Markdown)</button></div></div>`;
+
+  // Store both
+  const incidentContent=rc.innerHTML;
+
+  // Show download buttons for incident report
+  ra.innerHTML=`<button class="dl-btn" style="flex:1;" onclick="downloadReport('pdf')">Download PDF</button><button class="dl-btn" style="flex:1;" onclick="downloadReport('docx')">Download DOCX</button>`;
+
+  // Tab switching
+  function activateTab(id){
+    document.querySelectorAll('.rtab').forEach(t=>t.style.borderBottomColor='transparent');
+    document.getElementById(id).style.borderBottomColor='var(--t1)';
+  }
+  $('rtab-incident').addEventListener('click',()=>{
+    rc.innerHTML=incidentContent;
+    ra.innerHTML=`<button class="dl-btn" style="flex:1;" onclick="downloadReport('pdf')">Download PDF</button><button class="dl-btn" style="flex:1;" onclick="downloadReport('docx')">Download DOCX</button>`;
+    activateTab('rtab-incident');
+  });
+  $('rtab-research').addEventListener('click',()=>{
+    rc.innerHTML=researchHTML;
+    ra.innerHTML=`<button class="dl-btn" style="flex:1;" onclick="downloadReport('pdf')">Download PDF</button><button class="dl-btn" style="flex:1;" onclick="navigator.clipboard.writeText(window._kiroSpec);this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Kiro Spec (Markdown)',1500)">Copy Kiro Spec</button>`;
+    activateTab('rtab-research');
+  });
+
+  ilog('<b>Incident report + research report generated.</b>','lf-success');
   saveSnapshot('report');
   await sleep(1000);
 
@@ -794,71 +1064,81 @@ async function run(){
   await sleep(100);$('tbSentinel').style.width='2%';$('tbIndustry').style.width='100%';
 }
 
-function downloadReport(){
+function buildReportHTML(){
   const r=window._reportSections,m=window._reportMeta;
-  if(!r)return;
-
-  const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta charset="utf-8"><title>Security Incident Report — SENTINEL-2026-0327-001</title>
-<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->
+  if(!r)return'';
+  const clean=s=>s.replace(/&#8226;/g,'&bull;')
+    .replace(/<span class="report-badge"[^>]*>(.*?)<\/span>/g,'<b>$1</b>')
+    .replace(/<span style="[^"]*">(.*?)<\/span>/g,'<b>$1</b>');
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Incident Report SENTINEL-2026-0327-001</title>
 <style>
-  @page{size:letter;margin:1in 1in 1in 1in;}
-  body{font-family:'Calibri','Segoe UI',sans-serif;font-size:11pt;color:#1a1a1a;line-height:1.65;}
-  h1{font-size:22pt;font-weight:bold;color:#000;border-bottom:3px solid #000;padding-bottom:6px;margin-top:0;}
-  h2{font-size:13pt;font-weight:bold;color:#000;margin-top:20px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #d1d5db;}
-  p,div{margin:0;}
-  .header-bar{background:#000;color:#fff;padding:8px 16px;font-size:9pt;text-align:center;letter-spacing:3px;text-transform:uppercase;margin-bottom:20px;}
-  .meta-table{width:100%;border-collapse:collapse;margin-bottom:20px;}
-  .meta-table td{padding:4px 10px;font-size:10pt;border:none;vertical-align:top;}
-  .meta-table .label{font-weight:bold;width:180px;color:#444;}
-  .section{margin-bottom:16px;page-break-inside:avoid;}
-  .section-body{font-size:11pt;line-height:1.7;}
-  .section-body b{font-weight:bold;}
-  table.data{border-collapse:collapse;width:100%;margin:10px 0;}
-  table.data td,table.data th{border:1px solid #d1d5db;padding:6px 10px;font-size:10pt;text-align:left;}
-  table.data th{background:#f3f4f6;font-weight:bold;font-size:9pt;text-transform:uppercase;letter-spacing:0.5px;}
-  .footer-legal{margin-top:30px;padding-top:10px;border-top:2px solid #000;font-size:8.5pt;color:#666;line-height:1.5;}
-  .page-footer{font-size:8pt;color:#999;text-align:center;margin-top:20px;}
+@page{size:letter;margin:72pt 72pt 72pt 72pt;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Georgia,'Times New Roman',serif;font-size:11pt;color:#000;line-height:1.7;max-width:7in;margin:0 auto;padding:40px 0;}
+.confidential{text-align:center;font-size:8pt;letter-spacing:4px;text-transform:uppercase;color:#666;border:1px solid #999;padding:4px 16px;display:inline-block;margin-bottom:24px;}
+.title-block{margin-bottom:24px;border-bottom:2px solid #000;padding-bottom:12px;}
+.title-block h1{font-size:18pt;font-weight:bold;margin-bottom:4px;}
+.title-block .subtitle{font-size:10pt;color:#444;}
+.meta{margin-bottom:24px;}
+.meta table{width:100%;border-collapse:collapse;}
+.meta td{padding:3px 0;font-size:10pt;vertical-align:top;border:none;}
+.meta .k{font-weight:bold;width:170px;color:#333;}
+.meta .v{color:#000;}
+.section{margin-bottom:18px;}
+.section h2{font-size:12pt;font-weight:bold;margin-bottom:6px;padding-bottom:3px;border-bottom:1px solid #ccc;}
+.section .body{font-size:10.5pt;line-height:1.7;}
+.section .body b{font-weight:bold;}
+.legal{margin-top:28px;padding-top:12px;border-top:2px solid #000;font-size:8.5pt;color:#555;line-height:1.5;}
+.legal b{color:#333;}
+.page-num{text-align:center;font-size:8pt;color:#999;margin-top:20px;}
 </style></head><body>
-<div class="header-bar">Confidential — Attorney-Client Privileged — Do Not Distribute</div>
-<h1>Security Incident Report</h1>
-<table class="meta-table">
-  <tr><td class="label">Report ID</td><td>SENTINEL-2026-0327-001</td></tr>
-  <tr><td class="label">Date of Incident</td><td>March 25, 2026</td></tr>
-  <tr><td class="label">Date of Detection</td><td>${m.date}</td></tr>
-  <tr><td class="label">Classification</td><td>P1 — Credential Breach (Third-Party Compromise)</td></tr>
-  <tr><td class="label">Reporting Entity</td><td>Acme Corp, 100 Main Street, San Francisco, CA 94105</td></tr>
-  <tr><td class="label">Prepared By</td><td>Sentinel Autonomous Breach Response System</td></tr>
-  <tr><td class="label">Applicable Regulations</td><td>CA Civil Code §1798.82 (SB-1386), CCPA (§1798.100-199), NIST SP 800-61r2</td></tr>
-</table>
-
-${r.map(s=>{
-  let body=s.body.replace(/&#8226;/g,'&bull;')
-    .replace(/<span class="report-badge"[^>]*>(.*?)<\/span>/g,'<b>[$1]</b>')
-    .replace(/<span style="color:var\(--green\);font-weight:700;">(.*?)<\/span>/g,'<b>$1</b>')
-    .replace(/<span style="color:var\(--red\);font-weight:700;">(.*?)<\/span>/g,'<b>$1</b>');
-  return '<div class="section"><h2>'+s.title+'</h2><div class="section-body">'+body+'</div></div>';
-}).join('')}
-
-<div class="footer-legal">
-<b>Legal Notice:</b> This report was generated automatically by the Sentinel Autonomous Breach Response System and is intended solely for use by authorized personnel, legal counsel, and regulatory compliance officers of Acme Corp. This document may contain information protected by the attorney-client privilege and/or the work product doctrine. Any unauthorized review, use, disclosure, or distribution is prohibited.<br><br>
-All factual assertions contained herein are based on system logs, API response records, call transcripts, and automated analysis conducted at the time of the incident. This document should be reviewed by qualified legal counsel before submission to any regulatory body, use in legal proceedings, or distribution outside the immediate incident response team.<br><br>
-<b>Retention:</b> This document must be retained for a minimum of 7 years in accordance with California recordkeeping requirements. <b>Review:</b> General Counsel and/or Data Protection Officer review required within 48 hours of generation.
-</div>
-<div class="page-footer">SENTINEL-2026-0327-001 | Generated ${m.date} | Page 1</div>
+<center><div class="confidential">Confidential &mdash; Attorney-Client Privileged</div></center>
+<div class="title-block"><h1>Security Incident Report</h1><div class="subtitle">Acme Corp &mdash; Sentinel Automated Response &mdash; SENTINEL-2026-0327-001</div></div>
+<div class="meta"><table>
+<tr><td class="k">Report ID</td><td class="v">SENTINEL-2026-0327-001</td></tr>
+<tr><td class="k">Date of Incident</td><td class="v">March 25, 2026</td></tr>
+<tr><td class="k">Date of Detection</td><td class="v">${m.date}</td></tr>
+<tr><td class="k">Classification</td><td class="v">P1 — Credential Breach (Third-Party)</td></tr>
+<tr><td class="k">Reporting Entity</td><td class="v">Acme Corp, 100 Main St, San Francisco, CA 94105</td></tr>
+<tr><td class="k">Applicable Law</td><td class="v">CA Civ. Code &sect;1798.82, CCPA &sect;1798.100-199, NIST SP 800-61r2</td></tr>
+</table></div>
+${r.map(s=>'<div class="section"><h2>'+s.title+'</h2><div class="body">'+clean(s.body)+'</div></div>').join('')}
+<div class="legal"><b>Legal Notice.</b> This report was generated by the Sentinel Autonomous Breach Response System for use by authorized personnel and legal counsel of Acme Corp. It may contain attorney-client privileged material. Unauthorized disclosure is prohibited. All assertions are based on system logs, API records, and automated analysis. Review by qualified legal counsel is required before regulatory submission. Retain for minimum 7 years per California requirements. General Counsel review required within 48 hours.</div>
+<div class="page-num">SENTINEL-2026-0327-001</div>
 </body></html>`;
-
-  const blob=new Blob([html],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download='Incident_Report_SENTINEL-2026-0327-001.docx';
-  a.click();
-  URL.revokeObjectURL(url);
-  ilog('&#128196; <b>Report downloaded</b> — Incident_Report_SENTINEL-2026-0327-001.docx','lf-success');
 }
 
-document.addEventListener('keydown',e=>{if(e.key==='d'||e.key==='D')run();});
+async function downloadReport(fmt){
+  const html=buildReportHTML();
+  if(!html)return;
+
+  if(fmt==='pdf'){
+    try{
+      const resp=await fetch('/api/report/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({html})});
+      if(!resp.ok)throw new Error('PDF generation failed');
+      const blob=await resp.blob();
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');a.href=url;a.download='Incident_Report_SENTINEL-2026-0327-001.pdf';a.click();
+      URL.revokeObjectURL(url);
+      ilog('&#128196; <b>PDF downloaded</b> — Incident_Report_SENTINEL-2026-0327-001.pdf','lf-success');
+    }catch(e){ilog('&#10060; PDF generation failed: '+e.message,'lf-crit');}
+  }else{
+    // DOCX via Word-compatible HTML
+    const docHtml=html.replace('<!DOCTYPE html>','').replace('<html>',
+      '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">');
+    const blob=new Blob(['\ufeff'+docHtml],{type:'application/msword'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download='Incident_Report_SENTINEL-2026-0327-001.doc';a.click();
+    URL.revokeObjectURL(url);
+    ilog('&#128196; <b>DOCX downloaded</b> — Incident_Report_SENTINEL-2026-0327-001.doc','lf-success');
+  }
+}
+
+let skipCalls=false;
+document.addEventListener('keydown',e=>{
+  if((e.key==='d'||e.key==='D')&&!running)run();
+  else if((e.key==='d'||e.key==='D')&&running)skipCalls=true;
+});
 </script>
 </body>
 </html>
