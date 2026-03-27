@@ -23,21 +23,26 @@ class BreachMatch:
 
 
 async def ingest_breach_csv(csv_content: str) -> int:
-    """Ingest breach CSV data into Ghost DB. Returns number of records inserted."""
+    """Ingest breach CSV data into Ghost DB using batch insert. Returns number of records inserted."""
     reader = csv.DictReader(io.StringIO(csv_content))
-    count = 0
+    rows = [
+        (row["leaked_email"].strip().lower(), row.get("leaked_password_hash", ""), row.get("source", "unknown"))
+        for row in reader
+    ]
 
-    for row in reader:
-        await ghost_db.execute(
-            """INSERT INTO breach_events (leaked_email, leaked_password_hash, source)
-               VALUES ($1, $2, $3)
-               ON CONFLICT DO NOTHING""",
-            row["leaked_email"].strip().lower(),
-            row.get("leaked_password_hash", ""),
-            row.get("source", "unknown"),
-        )
-        count += 1
+    if not rows:
+        return 0
 
+    # Batch insert using executemany for speed (single round-trip)
+    pool = await ghost_db.get_pool()
+    await pool.executemany(
+        """INSERT INTO breach_events (leaked_email, leaked_password_hash, source)
+           VALUES ($1, $2, $3)
+           ON CONFLICT DO NOTHING""",
+        rows,
+    )
+
+    count = len(rows)
     log.info("breach.ingested", records=count)
     return count
 
