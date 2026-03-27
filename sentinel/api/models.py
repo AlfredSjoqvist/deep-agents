@@ -12,6 +12,7 @@ class TriggerRequest(BaseModel):
     """Body for POST /api/trigger."""
     breach_source: str = Field(default="DarkForum X", description="Name of the breach source")
     use_sample: bool = Field(default=True, description="Use built-in sample breach CSV")
+    scenario_id: str | None = None  # "credential_stuffing", "phishing_campaign", or None for default
 
 
 class CallRequest(BaseModel):

@@ -2,6 +2,7 @@
 
 Endpoints:
     POST /api/trigger          - Start the pipeline
+    GET  /api/scenarios        - List available breach scenarios
     GET  /api/events/{run_id}  - SSE event stream
     GET  /api/status/{run_id}  - Current pipeline status + result
     GET  /api/integrations     - Real integration health checks
@@ -116,6 +117,25 @@ async def health():
     return HealthResponse(status="ok", service="sentinel-api")
 
 
+@app.get("/api/scenarios")
+async def list_scenarios():
+    """List available breach scenarios from scenario_config.json."""
+    config_path = Path(__file__).parent.parent / "data" / "scenarios" / "scenario_config.json"
+    if not config_path.exists():
+        return {
+            "scenarios": [
+                {
+                    "id": "default",
+                    "name": "Default Breach (DarkForum X)",
+                    "description": "500 leaked credentials from dark web forum",
+                    "incident_type": "credential_stuffing",
+                }
+            ]
+        }
+    scenarios_config = json.loads(config_path.read_text())
+    return scenarios_config
+
+
 @app.post("/api/trigger", response_model=TriggerResponse)
 async def trigger_pipeline(
     body: TriggerRequest | None = None,
@@ -133,8 +153,31 @@ async def trigger_pipeline(
     csv_content: str | None = None
     source = "DarkForum X"
 
+    # Handle scenario selection — if a scenario_id is provided, load its CSV
+    # and breach_source from the scenario config.
+    if body and body.scenario_id:
+        config_path = Path(__file__).parent.parent / "data" / "scenarios" / "scenario_config.json"
+        if config_path.exists():
+            scenarios = json.loads(config_path.read_text())["scenarios"]
+            scenario = next((s for s in scenarios if s["id"] == body.scenario_id), None)
+            if scenario:
+                csv_path = config_path.parent / scenario["file"]
+                if csv_path.exists():
+                    csv_content = csv_path.read_text()
+                    source = scenario["breach_source"]
+                else:
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"Scenario CSV file not found: {scenario['file']}",
+                    )
+            else:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Scenario '{body.scenario_id}' not found",
+                )
+
     # Handle multipart CSV upload
-    if file is not None:
+    elif file is not None:
         raw = await file.read()
         csv_content = raw.decode("utf-8")
         source = breach_source or source
