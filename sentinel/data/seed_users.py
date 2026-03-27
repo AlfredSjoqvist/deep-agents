@@ -63,7 +63,7 @@ async def seed_users(count: int = 100):
     return users
 
 
-async def generate_breach_csv(users: list[dict], total_rows: int = 500) -> str:
+def generate_breach_csv(users: list[dict], total_rows: int = 500) -> str:
     """Generate a breach CSV. ~40 emails match users, ~12 with matching password hashes."""
     import csv
     import io
