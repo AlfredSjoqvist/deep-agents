@@ -22,5 +22,17 @@
       "Bash(gh *)",
       "Bash(source *)"
     ]
+  },
+  "mcpServers": {
+    "bland": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "bland-skills"
+      ],
+      "env": {
+        "BLAND_API_KEY": "${BLAND_API_KEY}"
+      }
+    }
   }
 }

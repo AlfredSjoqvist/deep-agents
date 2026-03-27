@@ -1,9 +1,16 @@
 """Streamlit dashboard for Sentinel — real-time breach response monitoring."""
 
+import sys
+from pathlib import Path
+
+# Ensure sentinel package is importable when run via `streamlit run`
+_project_root = str(Path(__file__).parent.parent.parent)
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
+
 import asyncio
 import time
 import json
-from pathlib import Path
 
 import streamlit as st
 
