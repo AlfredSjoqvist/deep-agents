@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python *)",
+      "Bash(pip *)",
+      "Bash(pip3 *)",
+      "Bash(uv *)",
+      "Bash(ghost *)",
+      "Bash(git *)",
+      "Bash(streamlit *)",
+      "Bash(curl *)",
+      "Bash(docker *)",
+      "Bash(ls *)",
+      "Bash(mkdir *)",
+      "Bash(which *)",
+      "Bash(touch *)",
+      "Bash(cp *)",
+      "Bash(mv *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "Bash(gh *)",
+      "Bash(source *)"
+    ]
+  }
+}
