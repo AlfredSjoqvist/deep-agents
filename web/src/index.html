@@ -43,192 +43,103 @@
         </div>
       </header>
 
-      <!-- ── Data Pipeline Visualization ────────────────────── -->
-      <div class="pipeline-card">
-        <div class="section-header">
-          <span class="icon">&#x1f504;</span> DATA PIPELINE
-          <span class="pipeline-header-sub">Sponsor-Powered Breach Response Flow</span>
-        </div>
-
-        <!-- Overmind Trace Line -->
-        <div class="overmind-trace" id="overmind-trace">
-          <div class="overmind-trace-line"></div>
-          <span class="overmind-trace-label">
-            <span class="overmind-dot"></span>
-            Overmind &mdash; Decision Tracing
-          </span>
-        </div>
-
-        <div class="pipeline-flow" id="pipeline-flow">
-          <!-- Node: Breach CSV -->
-          <div class="pipeline-node" data-node="breach-csv">
-            <div class="pipeline-circle pending" id="node-breach-csv">
-              <span class="node-icon">&#x1f4c4;</span>
-            </div>
-            <div class="pipeline-node-label" id="label-breach-csv">Breach CSV</div>
-          </div>
-
-          <div class="pipeline-connector pending" id="conn-0-1">
-            <div class="connector-line"></div>
-          </div>
-
-          <!-- Node: Ingest -->
-          <div class="pipeline-node" data-node="ingest">
-            <div class="pipeline-circle pending" id="node-ingest">
-              <span class="node-icon">&#x1f4e5;</span>
-            </div>
-            <div class="pipeline-node-label" id="label-ingest">Ingest</div>
-            <div class="sponsor-badge" style="--badge-color: #7C3AED;">Ghost DB</div>
-          </div>
-
-          <div class="pipeline-connector pending" id="conn-1-2">
-            <div class="connector-line"></div>
-          </div>
-
-          <!-- Node: Match Users -->
-          <div class="pipeline-node" data-node="match">
-            <div class="pipeline-circle pending" id="node-match">
-              <span class="node-icon">&#x1f50d;</span>
-            </div>
-            <div class="pipeline-node-label" id="label-match">Match Users</div>
-            <div class="sponsor-badge" style="--badge-color: #7C3AED;">Aerospike</div>
-          </div>
-
-          <div class="pipeline-connector pending" id="conn-2-3">
-            <div class="connector-line"></div>
-          </div>
-
-          <!-- Node: Research CVE -->
-          <div class="pipeline-node" data-node="research">
-            <div class="pipeline-circle pending" id="node-research">
-              <span class="node-icon">&#x1f52c;</span>
-            </div>
-            <div class="pipeline-node-label" id="label-research">Research CVE</div>
-            <div class="sponsor-badges-group">
-              <div class="sponsor-badge" style="--badge-color: #D4A574;">Claude</div>
-              <div class="sponsor-badge" style="--badge-color: #10B981;">Senso</div>
-              <div class="sponsor-badge sub-badge" style="--badge-color: #F59E0B;">Truefoundry</div>
-            </div>
-          </div>
-
-          <div class="pipeline-connector pending" id="conn-3-4">
-            <div class="connector-line"></div>
-          </div>
-
-          <!-- Node: Lock Accounts -->
-          <div class="pipeline-node" data-node="lockdown">
-            <div class="pipeline-circle pending" id="node-lockdown">
-              <span class="node-icon">&#x1f512;</span>
-            </div>
-            <div class="pipeline-node-label" id="label-lockdown">Lock Accounts</div>
-            <div class="sponsor-badge" style="--badge-color: #EB5424;">Auth0</div>
-          </div>
-
-          <div class="pipeline-connector pending" id="conn-4-5">
-            <div class="connector-line"></div>
-          </div>
-
-          <!-- Node: Call Users -->
-          <div class="pipeline-node" data-node="notify">
-            <div class="pipeline-circle pending" id="node-notify">
-              <span class="node-icon">&#x1f4de;</span>
-            </div>
-            <div class="pipeline-node-label" id="label-notify">Call Users</div>
-            <div class="sponsor-badge" style="--badge-color: #2563EB;">Bland AI</div>
-          </div>
-
-          <div class="pipeline-connector pending" id="conn-5-6">
-            <div class="connector-line"></div>
-          </div>
-
-          <!-- Node: Log Results -->
-          <div class="pipeline-node" data-node="complete">
-            <div class="pipeline-circle pending" id="node-complete">
-              <span class="node-icon">&#x1f4cb;</span>
-            </div>
-            <div class="pipeline-node-label" id="label-complete">Log Results</div>
-            <div class="sponsor-badge" style="--badge-color: #7C3AED;">Ghost DB</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── Metric Cards ───────────────────────────────────── -->
-      <div class="metrics-row">
-        <div class="metric-card info">
-          <span class="metric-icon">&#x1f4c4;</span>
-          <div class="metric-value" id="metric-records">0</div>
-          <div class="metric-label">Breach Records</div>
-        </div>
-        <div class="metric-card warning">
-          <span class="metric-icon">&#x1f50d;</span>
-          <div class="metric-value" id="metric-matches">0</div>
-          <div class="metric-label">Matches</div>
-        </div>
-        <div class="metric-card critical">
-          <span class="metric-icon">&#x1f6a8;</span>
-          <div class="metric-value" id="metric-critical">0</div>
-          <div class="metric-label">Critical</div>
-        </div>
-        <div class="metric-card safe">
-          <span class="metric-icon">&#x1f512;</span>
-          <div class="metric-value" id="metric-locked">0</div>
-          <div class="metric-label">Accts Locked</div>
-        </div>
-        <div class="metric-card purple">
-          <span class="metric-icon">&#x1f4de;</span>
-          <div class="metric-value" id="metric-called">0</div>
-          <div class="metric-label">Users Called</div>
-        </div>
-      </div>
-
-      <!-- Content Grid -->
+      <!-- ── Two-Column Layout ────────────────────────────────── -->
       <div class="content-grid">
 
-        <!-- Left Panel: Agent Activity Feed -->
+        <!-- Left Column (65%) -->
         <div class="left-panel">
+
+          <!-- Stat Cards Row -->
+          <div class="metrics-row">
+            <div class="metric-card info">
+              <span class="metric-icon">&#x1f4c4;</span>
+              <div class="metric-value" id="metric-records">0</div>
+              <div class="metric-label">Breach Records</div>
+            </div>
+            <div class="metric-card warning">
+              <span class="metric-icon">&#x1f50d;</span>
+              <div class="metric-value" id="metric-matches">0</div>
+              <div class="metric-label">Matches</div>
+            </div>
+            <div class="metric-card critical">
+              <span class="metric-icon">&#x1f6a8;</span>
+              <div class="metric-value" id="metric-critical">0</div>
+              <div class="metric-label">Critical</div>
+            </div>
+            <div class="metric-card safe">
+              <span class="metric-icon">&#x1f512;</span>
+              <div class="metric-value" id="metric-locked">0</div>
+              <div class="metric-label">Accts Locked</div>
+            </div>
+            <div class="metric-card purple">
+              <span class="metric-icon">&#x1f4de;</span>
+              <div class="metric-value" id="metric-called">0</div>
+              <div class="metric-label">Users Called</div>
+            </div>
+            <div class="metric-card teal">
+              <span class="metric-icon">&#x23f1;&#xfe0f;</span>
+              <div class="metric-value" id="metric-response-time">0s</div>
+              <div class="metric-label">Response Time</div>
+            </div>
+          </div>
+
+          <!-- Agent Activity Feed -->
           <div class="activity-feed-container">
             <div class="event-log-header">
               <span class="terminal-dot red"></span>
               <span class="terminal-dot yellow"></span>
               <span class="terminal-dot green"></span>
               <span class="title">Agent Activity Feed</span>
+              <div class="tool-call-summary" id="tool-call-summary">
+                <!-- Populated dynamically -->
+              </div>
             </div>
             <div class="event-log-body" id="event-log">
               <div class="event-log-empty" id="event-log-empty">Waiting for Sentinel activation...</div>
             </div>
           </div>
-        </div>
 
-        <!-- Right Panel -->
-        <div class="right-panel">
-
-          <!-- Active Tools -->
-          <div class="active-tools-card" id="active-tools-card">
-            <div class="section-header">
-              <span class="icon">&#x2699;&#xfe0f;</span> Active Tools
+          <!-- Time Comparison Bar -->
+          <div class="time-comparison-bar" id="time-comparison">
+            <div class="time-compare-item sentinel-time">
+              <span class="time-compare-label">Sentinel</span>
+              <div class="time-compare-bar-track">
+                <div class="time-compare-bar-fill sentinel-fill" id="sentinel-time-bar"></div>
+              </div>
+              <span class="time-compare-value" id="sentinel-time-value">0s</span>
             </div>
-            <div id="active-tools-content">
-              <div class="report-empty">No tools active. Trigger Sentinel to begin.</div>
+            <div class="time-compare-item industry-time">
+              <span class="time-compare-label">Industry Avg</span>
+              <div class="time-compare-bar-track">
+                <div class="time-compare-bar-fill industry-fill"></div>
+              </div>
+              <span class="time-compare-value">277 days</span>
             </div>
           </div>
 
-          <!-- Incident Report -->
+        </div>
+
+        <!-- Right Column (35%) -->
+        <div class="right-panel">
+
+          <!-- Incident Report Card -->
           <div class="report-panel" id="report-panel">
-            <div class="section-header">
-              <span class="icon">&#x1f4cb;</span> Incident Report
+            <div class="report-header" id="report-header">
+              <span class="report-title-icon">&#x1f4cb;</span>
+              <span class="report-title-text">Incident Report</span>
             </div>
             <div id="report-content">
               <div class="report-empty">No incident data yet. Trigger Sentinel to begin analysis.</div>
             </div>
           </div>
 
-          <!-- Incident Classification -->
-          <div class="classification-card" id="classification-card">
-            <div class="section-header">
-              <span class="icon">&#x1f3af;</span> Incident Classification
+          <!-- Call Status -->
+          <div class="call-status-card" id="call-status-card">
+            <div class="call-status-header">
+              <span class="icon">&#x1f4de;</span> Call Status
             </div>
-            <div id="classification-content">
-              <div class="report-empty">Classification will appear after research phase.</div>
+            <div class="call-status-body" id="call-status-body">
+              <div class="call-idle">No active calls</div>
             </div>
           </div>
 
@@ -241,23 +152,25 @@
           &#x26a1; TRIGGER SENTINEL
         </button>
         <div class="divider-v"></div>
-        <button class="call-test-btn" id="call-test-btn">
-          &#x1f4de; CALL TEST
-        </button>
+        <div class="control-group">
+          <label class="scenario-label" for="scenario-select">Scenario</label>
+          <select class="scenario-select" id="scenario-select">
+            <option value="default">Default</option>
+          </select>
+        </div>
         <div class="divider-v"></div>
         <div class="control-group">
           <div class="file-upload-wrapper">
             <input type="file" id="csv-upload" class="file-upload-input" accept=".csv">
             <button class="file-upload-btn" id="csv-upload-btn">
-              &#x1f4c1; Upload Breach CSV
+              &#x1f4c1; Upload CSV
             </button>
           </div>
         </div>
         <div class="divider-v"></div>
-        <div class="checkbox-wrapper">
-          <input type="checkbox" id="use-sample" checked>
-          <label for="use-sample">Use sample breach data</label>
-        </div>
+        <button class="call-test-btn" id="call-test-btn">
+          &#x1f4de; CALL TEST
+        </button>
       </div>
 
     </main>
