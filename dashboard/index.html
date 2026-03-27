@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENTINEL — Autonomous Breach Response</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0e17; color: #e0e6ed; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; overflow-x: hidden; }
+
+  .banner {
+    padding: 16px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(90deg, #0d1320, #131b2e);
+    border-bottom: 1px solid #1e293b;
+  }
+  .banner h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+  .banner h1 span { color: #60a5fa; }
+  .status-badge {
+    padding: 6px 18px; border-radius: 20px; font-weight: 600; font-size: 14px;
+    display: flex; align-items: center; gap: 8px;
+    transition: all 0.5s;
+  }
+  .status-badge .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .status-red { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+  .status-red .dot { background: #ef4444; }
+  .status-yellow { background: rgba(234,179,8,0.15); color: #facc15; border: 1px solid rgba(234,179,8,0.3); }
+  .status-yellow .dot { background: #eab308; }
+  .status-orange { background: rgba(249,115,22,0.15); color: #fb923c; border: 1px solid rgba(249,115,22,0.3); }
+  .status-orange .dot { background: #f97316; }
+  .status-green { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+  .status-green .dot { background: #22c55e; }
+  .status-idle { background: rgba(100,116,139,0.15); color: #94a3b8; border: 1px solid rgba(100,116,139,0.3); }
+  .status-idle .dot { background: #64748b; animation: none; }
+
+  .timer { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; color: #94a3b8; }
+  .timer span { color: #f1f5f9; }
+
+  .main { display: grid; grid-template-columns: 260px 1fr 340px; gap: 0; height: calc(100vh - 60px); }
+
+  .panel-left {
+    background: #0d1320; border-right: 1px solid #1e293b;
+    padding: 24px 20px; display: flex; flex-direction: column; gap: 16px;
+  }
+  .panel-left h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 2px; color: #64748b; margin-bottom: 4px; }
+  .stat-card {
+    background: #131b2e; border-radius: 12px; padding: 16px;
+    border: 1px solid #1e293b; transition: border-color 0.5s;
+  }
+  .stat-card .label { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+  .stat-card .value { font-size: 36px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .stat-card .sub { font-size: 12px; color: #64748b; margin-top: 2px; }
+  .critical .value { color: #f87171; }
+  .warning .value { color: #facc15; }
+  .safe .value { color: #4ade80; }
+
+  .progress-ring-container { display: flex; align-items: center; justify-content: center; margin: 12px 0; }
+  .progress-ring { position: relative; width: 100px; height: 100px; }
+  .progress-ring svg { transform: rotate(-90deg); }
+  .progress-ring circle { fill: none; stroke-width: 8; }
+  .progress-ring .bg { stroke: #1e293b; }
+  .progress-ring .fg { stroke: #60a5fa; stroke-linecap: round; transition: stroke-dashoffset 1s ease; }
+  .progress-ring .text { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 18px; font-weight: 700; color: #e2e8f0; }
+  .progress-ring .text small { display: block; font-size: 10px; color: #64748b; font-weight: 400; text-align: center; }
+
+  .panel-center { padding: 24px; overflow-y: auto; }
+  .panel-center h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 2px; color: #64748b; margin-bottom: 16px; }
+  .log-entry {
+    padding: 10px 14px; margin-bottom: 8px; border-radius: 8px;
+    background: #131b2e; border-left: 3px solid #334155;
+    animation: fadeIn 0.4s ease;
+    font-size: 14px; line-height: 1.5;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .log-entry .time { color: #475569; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .log-entry .icon { margin: 0 6px; }
+  .log-entry.decision { border-left-color: #8b5cf6; background: rgba(139,92,246,0.08); }
+  .log-entry.action { border-left-color: #3b82f6; }
+  .log-entry.error { border-left-color: #ef4444; background: rgba(239,68,68,0.06); }
+  .log-entry.success { border-left-color: #22c55e; background: rgba(34,197,94,0.06); }
+
+  .panel-right {
+    background: #0d1320; border-left: 1px solid #1e293b;
+    padding: 24px 20px; overflow-y: auto;
+  }
+  .panel-right h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 2px; color: #64748b; margin-bottom: 16px; }
+  .user-card {
+    background: #131b2e; border-radius: 10px; padding: 14px; margin-bottom: 10px;
+    border: 1px solid #1e293b; animation: fadeIn 0.4s ease;
+  }
+  .user-card .name { font-weight: 600; font-size: 14px; color: #e2e8f0; }
+  .user-card .email { font-size: 12px; color: #64748b; margin-top: 2px; }
+  .user-card .severity { font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
+  .sev-critical { background: rgba(239,68,68,0.2); color: #f87171; }
+  .sev-warning { background: rgba(234,179,8,0.2); color: #facc15; }
+  .user-card .badges { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge { font-size: 11px; padding: 3px 10px; border-radius: 10px; font-weight: 500; }
+  .badge-locked { background: rgba(96,165,250,0.15); color: #60a5fa; }
+  .badge-called { background: rgba(192,132,252,0.15); color: #c084fc; }
+  .badge-warned { background: rgba(250,204,21,0.15); color: #facc15; }
+
+  /* Upload overlay */
+  .upload-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(10,14,23,0.95);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 100;
+  }
+  .upload-overlay h2 { font-size: 28px; margin-bottom: 8px; }
+  .upload-overlay p { color: #64748b; margin-bottom: 32px; font-size: 16px; }
+  .upload-overlay .dropzone {
+    width: 500px; padding: 48px; border: 2px dashed #334155; border-radius: 16px;
+    text-align: center; cursor: pointer; transition: border-color 0.3s;
+  }
+  .upload-overlay .dropzone:hover { border-color: #60a5fa; }
+  .upload-overlay .dropzone.dragover { border-color: #60a5fa; background: rgba(96,165,250,0.05); }
+  .upload-overlay .dropzone p { color: #94a3b8; margin-bottom: 12px; }
+  .upload-overlay .dropzone small { color: #475569; }
+  .trigger-btn {
+    margin-top: 24px; padding: 14px 40px; background: #dc2626; color: white;
+    border: none; border-radius: 10px; font-size: 16px; font-weight: 700;
+    cursor: pointer; letter-spacing: 0.5px; transition: background 0.3s;
+    display: none;
+  }
+  .trigger-btn:hover { background: #ef4444; }
+  .trigger-btn.visible { display: block; }
+
+  .footer {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    padding: 10px 32px; background: #0a0e17; border-top: 1px solid #1e293b;
+    font-size: 12px; color: #475569; text-align: center;
+  }
+  .footer span { color: #64748b; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- UPLOAD OVERLAY -->
+<div class="upload-overlay" id="uploadOverlay">
+  <h2>🛡️ SENTINEL</h2>
+  <p>Autonomous Breach Response Agent</p>
+  <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+    <p>Drop breach CSV here or click to upload</p>
+    <small id="fileName">No file selected</small>
+  </div>
+  <input type="file" id="fileInput" accept=".csv" style="display:none">
+  <button class="trigger-btn" id="triggerBtn" onclick="startAgent()">🚨 BEGIN BREACH RESPONSE</button>
+</div>
+
+<!-- BANNER -->
+<div class="banner">
+  <h1>🛡️ <span>SENTINEL</span></h1>
+  <div id="statusBadge" class="status-badge status-idle">
+    <div class="dot"></div>
+    <span id="statusText">IDLE</span>
+  </div>
+  <div class="timer" id="timerContainer">
+    <span id="timer">00:00</span>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="panel-left">
+    <h2>Breach Overview</h2>
+    <div class="stat-card">
+      <div class="label">Leaked Records</div>
+      <div class="value" id="statLeaked">—</div>
+    </div>
+    <div class="stat-card critical">
+      <div class="label">Critical</div>
+      <div class="value" id="statCritical">—</div>
+      <div class="sub">Password hash match</div>
+    </div>
+    <div class="stat-card warning">
+      <div class="label">Warning</div>
+      <div class="value" id="statWarning">—</div>
+      <div class="sub">Email match only</div>
+    </div>
+    <div class="stat-card safe">
+      <div class="label">Safe</div>
+      <div class="value" id="statSafe">—</div>
+      <div class="sub">No match in system</div>
+    </div>
+    <div style="flex:1;"></div>
+    <div class="progress-ring-container">
+      <div class="progress-ring">
+        <svg width="100" height="100">
+          <circle class="bg" cx="50" cy="50" r="42"></circle>
+          <circle class="fg" id="progressCircle" cx="50" cy="50" r="42"
+            stroke-dasharray="263.9" stroke-dashoffset="263.9"></circle>
+        </svg>
+        <div class="text"><span id="progressNum">0</span><small>secured</small></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-center">
+    <h2>Agent Reasoning</h2>
+    <div id="logContainer"></div>
+  </div>
+
+  <div class="panel-right">
+    <h2>Response Log</h2>
+    <div id="userCards"></div>
+  </div>
+</div>
+
+<div class="footer">
+  Powered by: <span>Anthropic</span> · <span>Auth0</span> · <span>Ghost</span> · <span>Bland AI</span> · <span>Airbyte</span> · <span>Aerospike</span> · <span>Overmind</span> · <span>Truefoundry</span> · <span>Macroscope</span>
+</div>
+
+<script>
+const API = '';  // same origin
+let timerStart = null;
+let timerInterval = null;
+let lastLogCount = 0;
+let lastActionCount = 0;
+let polling = false;
+let selectedFile = null;
+
+// ── File Upload ──
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const fileName = document.getElementById('fileName');
+const triggerBtn = document.getElementById('triggerBtn');
+
+dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+dropzone.addEventListener('dragleave', () => { dropzone.classList.remove('dragover'); });
+dropzone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropzone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
+
+function handleFile(file) {
+  selectedFile = file;
+  fileName.textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+  triggerBtn.classList.add('visible');
+}
+
+async function startAgent() {
+  // Hide overlay
+  document.getElementById('uploadOverlay').classList.add('hidden');
+
+  // Reset
+  await fetch(API + '/api/reset', { method: 'POST' });
+
+  // Trigger
+  const formData = new FormData();
+  if (selectedFile) formData.append('file', selectedFile);
+  await fetch(API + '/api/trigger', { method: 'POST', body: formData });
+
+  // Start polling
+  timerStart = Date.now();
+  timerInterval = setInterval(updateTimer, 100);
+  polling = true;
+  poll();
+}
+
+function updateTimer() {
+  if (!timerStart) return;
+  const elapsed = Math.floor((Date.now() - timerStart) / 1000);
+  const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const s = String(elapsed % 60).padStart(2, '0');
+  document.getElementById('timer').textContent = `${m}:${s}`;
+}
+
+// ── Polling ──
+async function poll() {
+  if (!polling) return;
+  try {
+    const res = await fetch(API + '/api/state');
+    const data = await res.json();
+    render(data);
+  } catch (e) {
+    console.error('Poll error:', e);
+  }
+  setTimeout(poll, 1500);
+}
+
+function render(data) {
+  const breach = data.breach;
+  const logs = data.logs || [];
+  const actions = data.actions || [];
+
+  // Status badge
+  const statusMap = {
+    'idle': ['status-idle', 'IDLE'],
+    'analyzing': ['status-yellow', 'ANALYZING'],
+    'responding': ['status-orange', 'RESPONDING'],
+    'complete': ['status-green', 'CONTAINED'],
+  };
+  const [cls, text] = statusMap[data.status] || ['status-red', data.status.toUpperCase()];
+  const badge = document.getElementById('statusBadge');
+  badge.className = 'status-badge ' + cls;
+  document.getElementById('statusText').textContent = text;
+
+  if (data.status === 'complete') {
+    clearInterval(timerInterval);
+    document.querySelector('#statusBadge .dot').style.animation = 'none';
+    polling = false;
+  }
+
+  if (!breach) return;
+
+  // Stats
+  const total = breach.total_records || 0;
+  const critical = breach.critical_users || 0;
+  const warned = breach.warned_users || 0;
+  const safe = Math.max(0, total - critical - warned);
+  const locked = breach.locked_count || 0;
+  const called = breach.called_count || 0;
+
+  document.getElementById('statLeaked').textContent = total || '—';
+  document.getElementById('statCritical').textContent = critical || '—';
+  document.getElementById('statWarning').textContent = warned || '—';
+  document.getElementById('statSafe').textContent = safe || '—';
+
+  // Progress ring
+  const secured = locked;
+  const maxSecured = Math.max(critical, 1);
+  document.getElementById('progressNum').textContent = secured;
+  const circ = document.getElementById('progressCircle');
+  const total_dash = 263.9;
+  circ.setAttribute('stroke-dashoffset', total_dash - (total_dash * secured / maxSecured));
+
+  // Logs — only add NEW ones
+  if (logs.length > lastLogCount) {
+    const container = document.getElementById('logContainer');
+    for (let i = lastLogCount; i < logs.length; i++) {
+      const log = logs[i];
+      const ts = log.timestamp ? new Date(log.timestamp).toTimeString().slice(0, 8) : '';
+      const icons = { 'info': 'ℹ️', 'action': '⚡', 'decision': '🤖', 'error': '❌' };
+      const icon = icons[log.log_type] || 'ℹ️';
+
+      let cssClass = log.log_type || '';
+      if (log.log_type === 'action' && log.message.includes('✅')) cssClass = 'success';
+      if (log.log_type === 'action' && (log.message.includes('Locked') || log.message.includes('All '))) cssClass = 'success';
+
+      const div = document.createElement('div');
+      div.className = 'log-entry ' + cssClass;
+      div.innerHTML = `<span class="time">${ts}</span><span class="icon">${icon}</span>${log.message}`;
+      container.appendChild(div);
+    }
+    container.scrollTop = container.scrollHeight;
+    lastLogCount = logs.length;
+  }
+
+  // Actions — rebuild if changed
+  if (actions.length !== lastActionCount) {
+    const container = document.getElementById('userCards');
+    container.innerHTML = '';
+
+    // Group by user
+    const users = {};
+    for (const a of actions) {
+      if (!users[a.user_email]) users[a.user_email] = { name: a.user_name, email: a.user_email, severity: a.severity, actions: [] };
+      users[a.user_email].actions.push(a);
+    }
+
+    for (const [email, user] of Object.entries(users)) {
+      const isLocked = user.actions.some(a => a.action_type === 'account_locked');
+      const isCalled = user.actions.some(a => a.action_type === 'call_made');
+      const isWarned = user.actions.some(a => a.action_type === 'flagged_warning');
+
+      const sevClass = user.severity === 'critical' ? 'sev-critical' : 'sev-warning';
+
+      let badges = '';
+      if (isLocked) badges += '<span class="badge badge-locked">🔒 Locked</span>';
+      if (isCalled) badges += '<span class="badge badge-called">📞 Called</span>';
+      if (isWarned) badges += '<span class="badge badge-warned">⚠️ Warned</span>';
+
+      const div = document.createElement('div');
+      div.className = 'user-card';
+      div.innerHTML = `
+        <div><span class="name">${user.name}</span><span class="severity ${sevClass}">${user.severity.toUpperCase()}</span></div>
+        <div class="email">${email}</div>
+        <div class="badges">${badges}</div>
+      `;
+      container.appendChild(div);
+    }
+    container.scrollTop = container.scrollHeight;
+    lastActionCount = actions.length;
+  }
+}
+
+// Check if there's already an active breach on load
+fetch(API + '/api/state').then(r => r.json()).then(data => {
+  if (data.status !== 'idle') {
+    document.getElementById('uploadOverlay').classList.add('hidden');
+    timerStart = data.breach?.started_at ? new Date(data.breach.started_at).getTime() : Date.now();
+    timerInterval = setInterval(updateTimer, 100);
+    polling = true;
+    lastLogCount = 0;
+    lastActionCount = 0;
+    poll();
+  }
+});
+</script>
+</body>
+</html>

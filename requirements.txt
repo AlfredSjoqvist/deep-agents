@@ -1,0 +1,9 @@
+anthropic
+auth0-python
+python-dotenv
+streamlit
+psycopg2-binary
+overmind-sdk
+blandai
+requests
+faker

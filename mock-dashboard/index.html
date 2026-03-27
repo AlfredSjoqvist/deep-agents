@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENTINEL — Autonomous Breach Response</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg-deep: #060a13;
+    --bg-panel: #0b1022;
+    --bg-card: #0f1629;
+    --bg-card-hover: #131d35;
+    --border: #1a2440;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #475569;
+    --red: #ef4444;
+    --red-glow: rgba(239,68,68,0.25);
+    --orange: #f97316;
+    --yellow: #eab308;
+    --yellow-glow: rgba(234,179,8,0.25);
+    --green: #22c55e;
+    --green-glow: rgba(34,197,94,0.25);
+    --blue: #3b82f6;
+    --blue-glow: rgba(59,130,246,0.25);
+    --purple: #8b5cf6;
+    --cyan: #06b6d4;
+  }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow: hidden; height: 100vh;
+  }
+
+  /* Background */
+  .bg-grid {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+  .bg-glow {
+    position: fixed; z-index: 0; pointer-events: none;
+    width: 600px; height: 600px; border-radius: 50%;
+    filter: blur(120px); transition: all 2s ease;
+  }
+  .bg-glow-1 { top: -200px; right: -100px; background: var(--blue); opacity: 0.12; }
+  .bg-glow-2 { bottom: -200px; left: -100px; background: var(--purple); opacity: 0.1; }
+
+  /* Banner */
+  .banner {
+    position: relative; z-index: 10;
+    padding: 14px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(11,16,34,0.85); backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand .shield {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--blue), var(--purple));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; box-shadow: 0 0 20px var(--blue-glow);
+  }
+  .brand h1 { font-size: 20px; font-weight: 800; }
+  .brand .accent { background: linear-gradient(90deg, var(--blue), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .brand .subtitle { font-size: 11px; color: var(--text-muted); font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; }
+
+  .status-badge {
+    padding: 8px 20px; border-radius: 24px; font-weight: 700; font-size: 13px;
+    display: flex; align-items: center; gap: 10px;
+    letter-spacing: 1px; text-transform: uppercase;
+    font-family: 'JetBrains Mono', monospace; transition: all 0.6s;
+  }
+  .status-badge .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    box-shadow: 0 0 8px currentColor;
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.4; transform:scale(0.8); } }
+  .status-idle { background: rgba(71,85,105,0.15); color: #64748b; border: 1px solid rgba(71,85,105,0.3); }
+  .status-idle .dot { background: #64748b; }
+  .status-red { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.25); box-shadow: 0 0 30px rgba(239,68,68,0.1); }
+  .status-red .dot { background: var(--red); }
+  .status-yellow { background: rgba(234,179,8,0.12); color: #facc15; border: 1px solid rgba(234,179,8,0.25); }
+  .status-yellow .dot { background: var(--yellow); }
+  .status-orange { background: rgba(249,115,22,0.12); color: #fb923c; border: 1px solid rgba(249,115,22,0.25); box-shadow: 0 0 30px rgba(249,115,22,0.1); }
+  .status-orange .dot { background: var(--orange); }
+  .status-green { background: rgba(34,197,94,0.12); color: #4ade80; border: 1px solid rgba(34,197,94,0.25); box-shadow: 0 0 30px rgba(34,197,94,0.1); }
+  .status-green .dot { background: var(--green); animation: none; }
+
+  .timer-block { text-align: right; }
+  .timer-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; }
+  .timer-value {
+    font-size: 32px; font-weight: 800; font-family: 'JetBrains Mono', monospace;
+    background: linear-gradient(90deg, var(--text-primary), var(--text-secondary));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+
+  /* Phase bar */
+  .phase-bar {
+    position: relative; z-index: 10;
+    display: flex; align-items: center;
+    padding: 0 32px; height: 44px;
+    background: rgba(11,16,34,0.6); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .phase-step {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 16px; height: 100%;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+    color: var(--text-muted); border-bottom: 2px solid transparent; transition: all 0.4s;
+  }
+  .phase-step .num {
+    width: 20px; height: 20px; border-radius: 50%; font-size: 10px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg-card); border: 1px solid var(--border);
+    font-weight: 700; transition: all 0.4s;
+  }
+  .phase-step.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .phase-step.active .num { background: var(--blue); color: white; border-color: var(--blue); box-shadow: 0 0 12px var(--blue-glow); }
+  .phase-step.done { color: var(--green); }
+  .phase-step.done .num { background: var(--green); color: white; border-color: var(--green); }
+  .phase-connector { width: 24px; height: 2px; background: var(--border); transition: background 0.4s; }
+  .phase-connector.done { background: var(--green); }
+
+  /* Time comparison */
+  .time-compare {
+    position: relative; z-index: 10;
+    display: none; align-items: center; gap: 24px;
+    padding: 10px 32px;
+    background: rgba(11,16,34,0.5); border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .time-compare.visible { display: flex; }
+  .tc-row { display: flex; align-items: center; gap: 10px; flex: 1; }
+  .tc-label { font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; min-width: 100px; }
+  .tc-bar-bg { flex: 1; height: 8px; background: var(--bg-card); border-radius: 4px; overflow: hidden; }
+  .tc-bar-fill { height: 100%; border-radius: 4px; transition: width 2s cubic-bezier(0.16,1,0.3,1); }
+  .tc-time { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 12px; min-width: 80px; text-align: right; }
+
+  /* Main grid */
+  .main {
+    position: relative; z-index: 10;
+    display: grid;
+    grid-template-columns: 300px 1fr 400px;
+    height: calc(100vh - 112px);
+  }
+  .main.with-compare { height: calc(100vh - 150px); }
+
+  /* Left panel */
+  .panel-left {
+    background: rgba(11,16,34,0.5); backdrop-filter: blur(10px);
+    border-right: 1px solid var(--border);
+    padding: 20px 16px; display: flex; flex-direction: column; gap: 12px;
+    overflow-y: auto; scrollbar-width: none;
+  }
+  .panel-left::-webkit-scrollbar { display: none; }
+  .section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted); font-weight: 700; }
+
+  /* Particle grid */
+  .particle-container {
+    background: var(--bg-card); border-radius: 12px; padding: 16px;
+    border: 1px solid var(--border);
+  }
+  .particle-grid {
+    display: grid; grid-template-columns: repeat(25, 1fr); gap: 3px;
+    margin-top: 10px;
+  }
+  .particle {
+    width: 100%; aspect-ratio: 1; border-radius: 2px;
+    background: #1e293b; transition: all 0.3s ease;
+  }
+  .particle.critical { background: var(--red); box-shadow: 0 0 4px var(--red-glow); }
+  .particle.warning { background: var(--yellow); box-shadow: 0 0 4px var(--yellow-glow); }
+  .particle.safe { background: var(--green); opacity: 0.5; }
+  .particle-legend {
+    display: flex; gap: 16px; margin-top: 10px; font-size: 11px; color: var(--text-muted);
+  }
+  .particle-legend span { display: flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+  /* Stat cards */
+  .stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .stat-card {
+    background: var(--bg-card); border-radius: 10px; padding: 12px;
+    border: 1px solid var(--border); position: relative; overflow: hidden;
+  }
+  .stat-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--border); transition: all 0.6s;
+  }
+  .stat-card .label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+  .stat-card .value {
+    font-size: 32px; font-weight: 900; font-family: 'JetBrains Mono', monospace;
+    line-height: 1; margin-top: 4px;
+  }
+  .stat-card.critical::before { background: var(--red); }
+  .stat-card.critical .value { color: var(--red); text-shadow: 0 0 20px var(--red-glow); }
+  .stat-card.warning::before { background: var(--yellow); }
+  .stat-card.warning .value { color: var(--yellow); }
+  .stat-card.safe::before { background: var(--green); }
+  .stat-card.safe .value { color: var(--green); }
+
+  /* Breach source card */
+  .breach-source {
+    background: var(--bg-card); border-radius: 10px; padding: 14px;
+    border: 1px solid var(--border); display: none;
+  }
+  .breach-source.visible { display: block; }
+  .bs-row { display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; }
+  .bs-key { color: var(--text-muted); }
+  .bs-val { color: var(--text-primary); font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+
+  /* Progress ring */
+  .progress-section {
+    background: var(--bg-card); border-radius: 12px; padding: 16px;
+    border: 1px solid var(--border); display: none; flex-direction: column; align-items: center;
+  }
+  .progress-section.visible { display: flex; }
+  .progress-ring { position: relative; width: 110px; height: 110px; margin: 4px 0; }
+  .progress-ring svg { transform: rotate(-90deg); filter: drop-shadow(0 0 6px var(--blue-glow)); }
+  .progress-ring circle { fill: none; }
+  .progress-ring .bg { stroke: var(--border); stroke-width: 6; }
+  .progress-ring .fg { stroke: var(--blue); stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 0.8s cubic-bezier(0.16,1,0.3,1); }
+  .ring-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; }
+  .ring-num { font-size: 28px; font-weight: 900; font-family: 'JetBrains Mono', monospace; }
+  .ring-total { font-size: 14px; color: var(--text-muted); }
+  .ring-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+
+  /* Center panel */
+  .panel-center {
+    padding: 20px 24px; overflow-y: auto;
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+  .panel-center::-webkit-scrollbar { width: 6px; }
+  .panel-center::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .log-entry {
+    padding: 12px 16px; margin-bottom: 6px; border-radius: 10px;
+    background: var(--bg-card); border-left: 3px solid var(--border);
+    animation: logIn 0.35s cubic-bezier(0.16,1,0.3,1);
+    font-size: 13px; line-height: 1.6; transition: background 0.3s;
+  }
+  .log-entry:hover { background: var(--bg-card-hover); }
+  @keyframes logIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+  .log-entry .log-header { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+  .log-entry .time { font-family: 'JetBrains Mono', monospace; color: var(--text-muted); font-size: 11px; }
+  .log-entry .phase-tag {
+    font-size: 9px; padding: 2px 7px; border-radius: 4px;
+    font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .log-entry .msg { color: var(--text-secondary); }
+  .log-entry .msg b { color: var(--text-primary); font-weight: 600; }
+  .log-entry.action { border-left-color: var(--blue); }
+  .log-entry.action .phase-tag { background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .log-entry.decision { border-left-color: var(--purple); background: rgba(139,92,246,0.05); border: 1px solid rgba(139,92,246,0.15); border-left: 3px solid var(--purple); }
+  .log-entry.decision .phase-tag { background: rgba(139,92,246,0.15); color: #a78bfa; }
+  .log-entry.critical-log { border-left-color: var(--red); background: rgba(239,68,68,0.04); }
+  .log-entry.critical-log .phase-tag { background: rgba(239,68,68,0.15); color: #f87171; }
+  .log-entry.success { border-left-color: var(--green); }
+  .log-entry.success .phase-tag { background: rgba(34,197,94,0.15); color: #4ade80; }
+
+  /* API call ticker */
+  .api-ticker {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    padding: 8px 14px; margin-bottom: 4px; border-radius: 6px;
+    background: rgba(6,10,19,0.8); border: 1px solid #1a2440;
+    animation: logIn 0.3s ease; display: flex; align-items: center; gap: 8px;
+    color: var(--text-muted);
+  }
+  .api-ticker .method { color: var(--cyan); font-weight: 700; }
+  .api-ticker .url { color: var(--text-secondary); }
+  .api-ticker .status-ok { color: var(--green); font-weight: 700; }
+  .api-ticker .status-err { color: var(--red); font-weight: 700; }
+  .api-ticker .latency { color: var(--text-muted); }
+
+  /* Right panel */
+  .panel-right {
+    background: rgba(11,16,34,0.5); backdrop-filter: blur(10px);
+    border-left: 1px solid var(--border);
+    padding: 20px 16px; overflow-y: auto;
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+  .panel-right::-webkit-scrollbar { width: 6px; }
+  .panel-right::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .user-card {
+    background: var(--bg-card); border-radius: 12px;
+    padding: 16px; margin-bottom: 12px;
+    border: 1px solid var(--border);
+    animation: cardIn 0.4s cubic-bezier(0.16,1,0.3,1);
+    transition: all 0.3s;
+  }
+  @keyframes cardIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+  .user-card .card-header { display: flex; align-items: center; justify-content: space-between; }
+  .user-card .user-name { font-weight: 700; font-size: 15px; }
+  .user-card .user-email { font-size: 12px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+  .user-card .user-phone { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+  .severity-badge {
+    font-size: 10px; padding: 4px 10px; border-radius: 6px;
+    font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .sev-critical { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+
+  .action-list { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .action-item {
+    font-size: 13px; display: flex; align-items: center; gap: 10px;
+    color: var(--text-muted); font-weight: 500;
+  }
+  .action-icon {
+    width: 22px; height: 22px; border-radius: 50%; display: flex;
+    align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0;
+  }
+  .action-icon.done { background: rgba(34,197,94,0.15); color: var(--green); }
+  .action-icon.pending { background: rgba(71,85,105,0.15); color: var(--text-muted); }
+  .action-icon.progress { background: rgba(234,179,8,0.15); color: var(--yellow); animation: pulse 1s infinite; }
+
+  /* Waveform */
+  .waveform-container {
+    display: none; margin-top: 12px; padding: 10px 14px;
+    background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.15);
+    border-radius: 8px; align-items: center; gap: 10px;
+  }
+  .waveform-container.active { display: flex; }
+  .waveform-label { font-size: 11px; color: var(--purple); font-weight: 600; white-space: nowrap; }
+  .waveform-bars { display: flex; align-items: center; gap: 2px; flex: 1; height: 24px; }
+  .waveform-bar {
+    width: 3px; background: var(--purple); border-radius: 2px;
+    animation: wave 0.8s ease-in-out infinite alternate;
+  }
+  @keyframes wave { 0% { height: 4px; opacity: 0.4; } 100% { height: 20px; opacity: 1; } }
+
+  /* Timeline mini */
+  .mini-timeline { margin-top: 12px; display: none; }
+  .mini-timeline.visible { display: block; }
+  .tl-track { display: flex; align-items: center; height: 4px; background: var(--border); border-radius: 2px; position: relative; margin: 8px 0 4px; }
+  .tl-fill { height: 100%; border-radius: 2px; background: var(--green); transition: width 0.5s ease; position: absolute; left: 0; top: 0; }
+  .tl-dot {
+    width: 10px; height: 10px; border-radius: 50%; position: absolute; top: -3px;
+    background: var(--border); border: 2px solid var(--bg-card);
+    transition: all 0.3s; z-index: 2;
+  }
+  .tl-dot.done { background: var(--green); }
+  .tl-dot.active { background: var(--yellow); animation: pulse 1s infinite; }
+  .tl-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+  .tl-time { font-size: 9px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+  .tl-time.done { color: var(--green); }
+
+  /* Upload overlay */
+  .upload-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(6,10,19,0.92); backdrop-filter: blur(30px);
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.5s;
+  }
+  .upload-overlay.hidden { opacity: 0; pointer-events: none; }
+  .upload-box {
+    text-align: center; padding: 60px 80px;
+    border: 2px dashed var(--border); border-radius: 24px;
+    background: rgba(15,22,41,0.6); cursor: pointer; transition: all 0.3s;
+  }
+  .upload-box:hover { border-color: var(--blue); background: rgba(59,130,246,0.04); }
+  .upload-box .upload-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.6; }
+  .upload-box h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .upload-box p { color: var(--text-muted); font-size: 14px; }
+  .upload-box .file-hint {
+    margin-top: 16px; font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-muted); background: var(--bg-card);
+    padding: 8px 16px; border-radius: 8px; display: inline-block;
+  }
+
+  /* Scanline */
+  .scanline {
+    position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 50;
+    background: linear-gradient(90deg, transparent, var(--blue), transparent);
+    opacity: 0; animation: scanMove 3s linear infinite;
+  }
+  .scanline.active { opacity: 0.5; }
+  @keyframes scanMove { 0% { top: 0; } 100% { top: 100vh; } }
+
+  /* Footer */
+  .footer {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
+    padding: 10px 32px;
+    background: rgba(6,10,19,0.9); backdrop-filter: blur(10px);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    font-size: 11px; color: var(--text-muted);
+  }
+  .footer .sep { color: #1e293b; }
+  .footer .sponsor { color: var(--text-secondary); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-glow bg-glow-1"></div>
+<div class="bg-glow bg-glow-2"></div>
+<div class="scanline" id="scanline"></div>
+
+<!-- Upload overlay -->
+<div class="upload-overlay" id="uploadOverlay">
+  <div class="upload-box" id="uploadBox">
+    <div class="upload-icon">&#128274;</div>
+    <h2>Upload Breach Data</h2>
+    <p>Drop a credential dump to begin autonomous response</p>
+    <div class="file-hint">breach_darkforum_x.csv — 150 records</div>
+  </div>
+</div>
+
+<!-- Banner -->
+<div class="banner">
+  <div class="brand">
+    <div class="shield">&#128737;</div>
+    <div>
+      <h1><span class="accent">SENTINEL</span></h1>
+      <div class="subtitle">Autonomous Breach Response</div>
+    </div>
+  </div>
+  <div id="statusBadge" class="status-badge status-idle">
+    <div class="dot"></div>
+    <span id="statusText">Awaiting Data</span>
+  </div>
+  <div class="timer-block">
+    <div class="timer-label">Response Time</div>
+    <div class="timer-value" id="timer">00:00</div>
+  </div>
+</div>
+
+<!-- Phase bar -->
+<div class="phase-bar">
+  <div class="phase-step" id="phase-ingest"><div class="num">1</div>Ingest</div>
+  <div class="phase-connector" id="conn-1"></div>
+  <div class="phase-step" id="phase-match"><div class="num">2</div>Match</div>
+  <div class="phase-connector" id="conn-2"></div>
+  <div class="phase-step" id="phase-notify"><div class="num">3</div>Notify</div>
+  <div class="phase-connector" id="conn-3"></div>
+  <div class="phase-step" id="phase-analyze"><div class="num">4</div>Decide</div>
+  <div class="phase-connector" id="conn-4"></div>
+  <div class="phase-step" id="phase-lock"><div class="num">5</div>Respond</div>
+  <div class="phase-connector" id="conn-5"></div>
+  <div class="phase-step" id="phase-complete"><div class="num">6</div>Complete</div>
+</div>
+
+<!-- Time comparison -->
+<div class="time-compare" id="timeCompare">
+  <div class="tc-row">
+    <div class="tc-label" style="color:var(--green);">Sentinel</div>
+    <div class="tc-bar-bg"><div class="tc-bar-fill" id="tcSentinel" style="width:0%; background: linear-gradient(90deg, var(--green), var(--cyan));"></div></div>
+    <div class="tc-time" id="tcSentinelTime" style="color:var(--green);">—</div>
+  </div>
+  <div class="tc-row">
+    <div class="tc-label" style="color:var(--red);">Industry Avg</div>
+    <div class="tc-bar-bg"><div class="tc-bar-fill" id="tcIndustry" style="width:0%; background: linear-gradient(90deg, var(--red), var(--orange));"></div></div>
+    <div class="tc-time" style="color:var(--red);">277 days</div>
+  </div>
+</div>
+
+<!-- Main grid -->
+<div class="main" id="mainGrid">
+
+  <!-- Left panel -->
+  <div class="panel-left">
+    <div class="section-label">Credential Scan</div>
+
+    <!-- Particle grid -->
+    <div class="particle-container">
+      <div class="section-label">150 Leaked Records</div>
+      <div class="particle-grid" id="particleGrid"></div>
+      <div class="particle-legend">
+        <span><div class="legend-dot" style="background:var(--red);"></div> Critical</span>
+        <span><div class="legend-dot" style="background:var(--yellow);"></div> Warning</span>
+        <span><div class="legend-dot" style="background:var(--green);"></div> Safe</span>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stat-row">
+      <div class="stat-card critical">
+        <div class="label">Critical</div>
+        <div class="value" id="statCritical">—</div>
+      </div>
+      <div class="stat-card warning">
+        <div class="label">Warning</div>
+        <div class="value" id="statWarning">—</div>
+      </div>
+      <div class="stat-card safe">
+        <div class="label">Safe</div>
+        <div class="value" id="statSafe">—</div>
+      </div>
+    </div>
+
+    <!-- Breach source -->
+    <div class="breach-source" id="breachSource">
+      <div class="section-label">Breach Source</div>
+      <div class="bs-row"><span class="bs-key">Origin</span><span class="bs-val">darkforum_x</span></div>
+      <div class="bs-row"><span class="bs-key">Type</span><span class="bs-val">E-commerce DB</span></div>
+      <div class="bs-row"><span class="bs-key">Leaked</span><span class="bs-val">2026-03-25</span></div>
+      <div class="bs-row"><span class="bs-key">Format</span><span class="bs-val">email + bcrypt</span></div>
+    </div>
+
+    <div style="flex:1;"></div>
+
+    <!-- Progress ring -->
+    <div class="progress-section" id="progressSection">
+      <div class="section-label" style="margin-bottom:8px;">Accounts Secured</div>
+      <div class="progress-ring">
+        <svg width="110" height="110">
+          <circle class="bg" cx="55" cy="55" r="48"></circle>
+          <circle class="fg" id="progressCircle" cx="55" cy="55" r="48"
+            stroke-dasharray="301.6" stroke-dashoffset="301.6"></circle>
+        </svg>
+        <div class="ring-text">
+          <div class="ring-num"><span id="progressNum">0</span><span class="ring-total">/3</span></div>
+          <div class="ring-label">Secured</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Center panel -->
+  <div class="panel-center">
+    <div class="section-label" style="margin-bottom:14px;">Agent Reasoning</div>
+    <div id="logContainer"></div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="panel-right">
+    <div class="section-label" style="margin-bottom:14px;">Response Log — 3 Affected Users</div>
+    <div id="userCards"></div>
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  Powered by
+  <span class="sponsor">Anthropic</span><span class="sep">|</span>
+  <span class="sponsor">Auth0</span><span class="sep">|</span>
+  <span class="sponsor">Ghost</span><span class="sep">|</span>
+  <span class="sponsor">Bland AI</span><span class="sep">|</span>
+  <span class="sponsor">Airbyte</span><span class="sep">|</span>
+  <span class="sponsor">Aerospike</span><span class="sep">|</span>
+  <span class="sponsor">Overmind</span><span class="sep">|</span>
+  <span class="sponsor">Truefoundry</span><span class="sep">|</span>
+  <span class="sponsor">Macroscope</span>
+</div>
+
+<script>
+// ===== CONFIG =====
+const BLAND_API_KEY = "org_81e318d0be774ddfd4c97663dc84d55114609a59349d6259714e742c28aea6fa5bfa58167dab1e9d0a8969";
+const PHONE_NUMBER = "+46761658009";
+
+const breachUsers = [
+  { email: "sarah.chen@acme.com", name: "Sarah Chen", phone: "+1XXXXXXXXXX" },
+  { email: "alfred.sjoqvist@acme.com", name: "Alfred Sjöqvist", phone: PHONE_NUMBER },
+  { email: "mike.ross@acme.com", name: "Mike Ross", phone: "+1XXXXXXXXXX" },
+];
+
+// 150 particles: 3 critical (indices 23, 67, 112), 8 warning, rest safe
+const TOTAL_PARTICLES = 150;
+const CRITICAL_IDX = [23, 67, 112];
+const WARNING_IDX = [5, 19, 41, 58, 79, 95, 108, 134];
+
+let timerStart = null, timerInterval = null;
+
+// ===== INIT PARTICLES =====
+const grid = document.getElementById('particleGrid');
+for (let i = 0; i < TOTAL_PARTICLES; i++) {
+  const d = document.createElement('div');
+  d.className = 'particle';
+  d.id = 'p-' + i;
+  grid.appendChild(d);
+}
+
+// ===== HELPERS =====
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function updateTimer() {
+  if (!timerStart) return;
+  const elapsed = Math.floor((Date.now() - timerStart) / 1000);
+  document.getElementById('timer').textContent =
+    String(Math.floor(elapsed/60)).padStart(2,'0') + ':' + String(elapsed%60).padStart(2,'0');
+}
+
+function setStatus(cls, text) {
+  document.getElementById('statusBadge').className = 'status-badge ' + cls;
+  document.getElementById('statusText').textContent = text;
+}
+
+function setPhase(name) {
+  const phases = ['ingest','match','analyze','lock','notify','complete'];
+  const idx = phases.indexOf(name);
+  phases.forEach((p, i) => {
+    const el = document.getElementById('phase-' + p);
+    const conn = document.getElementById('conn-' + (i + 1));
+    if (i < idx) { el.className = 'phase-step done'; if(conn) conn.className = 'phase-connector done'; }
+    else if (i === idx) { el.className = 'phase-step active'; }
+    else { el.className = 'phase-step'; if(conn) conn.className = 'phase-connector'; }
+  });
+}
+
+function addLog(msg, type = '', phase = '') {
+  const c = document.getElementById('logContainer');
+  const time = new Date().toTimeString().slice(0, 8);
+  const tag = phase ? `<span class="phase-tag">${phase}</span>` : '';
+  const cls = type === 'critical' ? 'critical-log' : type;
+  const div = document.createElement('div');
+  div.className = 'log-entry ' + cls;
+  div.innerHTML = `<div class="log-header"><span class="time">${time}</span>${tag}</div><div class="msg">${msg}</div>`;
+  c.appendChild(div);
+  c.scrollTop = c.scrollHeight;
+}
+
+function addApiTick(method, url, status, ms) {
+  const c = document.getElementById('logContainer');
+  const div = document.createElement('div');
+  div.className = 'api-ticker';
+  const sClass = status < 300 ? 'status-ok' : 'status-err';
+  div.innerHTML = `<span class="method">${method}</span><span class="url">${url}</span><span class="${sClass}">${status}</span><span class="latency">${ms}ms</span>`;
+  c.appendChild(div);
+  c.scrollTop = c.scrollHeight;
+}
+
+function animateCount(id, target, dur = 800) {
+  const el = document.getElementById(id);
+  const start = parseInt(el.textContent) || 0;
+  const t0 = performance.now();
+  (function tick(now) {
+    const t = Math.min((now - t0) / dur, 1);
+    el.textContent = Math.round(start + (target - start) * (1 - Math.pow(1 - t, 3)));
+    if (t < 1) requestAnimationFrame(tick);
+  })(performance.now());
+}
+
+function updateProgress(n) {
+  document.getElementById('progressNum').textContent = n;
+  const circ = document.getElementById('progressCircle');
+  circ.setAttribute('stroke-dashoffset', 301.6 - (301.6 * n / 3));
+  if (n === 3) { circ.style.stroke = 'var(--green)'; circ.style.filter = 'drop-shadow(0 0 10px var(--green-glow))'; }
+}
+
+function addUserCard(user, idx) {
+  const c = document.getElementById('userCards');
+  const uid = user.email.replace(/[@.]/g, '-');
+  const div = document.createElement('div');
+  div.className = 'user-card';
+  div.id = 'card-' + uid;
+
+  // Generate waveform bars
+  let bars = '';
+  for (let i = 0; i < 30; i++) {
+    const delay = (Math.random() * 0.6).toFixed(2);
+    bars += `<div class="waveform-bar" style="animation-delay:${delay}s;"></div>`;
+  }
+
+  div.innerHTML = `
+    <div class="card-header">
+      <div>
+        <div class="user-name">${user.name}</div>
+        <div class="user-email">${user.email}</div>
+        <div class="user-phone">${user.phone}</div>
+      </div>
+      <span class="severity-badge sev-critical">CRITICAL</span>
+    </div>
+    <div class="action-list" id="actions-${uid}">
+      <div class="action-item" id="${uid}-call">
+        <div class="action-icon pending">&#8226;</div><span>Voice notification</span>
+      </div>
+      <div class="action-item" id="${uid}-transcript">
+        <div class="action-icon pending">&#8226;</div><span>Transcript analyzed</span>
+      </div>
+      <div class="action-item" id="${uid}-decision">
+        <div class="action-icon pending">&#8226;</div><span>Decision: pending</span>
+      </div>
+      <div class="action-item" id="${uid}-lock">
+        <div class="action-icon pending">&#8226;</div><span>Account action</span>
+      </div>
+    </div>
+    <div class="waveform-container" id="wave-${uid}">
+      <div class="waveform-label">&#128266; LIVE CALL</div>
+      <div class="waveform-bars">${bars}</div>
+    </div>
+    <div class="mini-timeline" id="tl-${uid}">
+      <div class="tl-track">
+        <div class="tl-fill" id="tl-fill-${uid}" style="width:0%;"></div>
+        <div class="tl-dot" id="tl-d0-${uid}" style="left:0%;"></div>
+        <div class="tl-dot" id="tl-d1-${uid}" style="left:33%;"></div>
+        <div class="tl-dot" id="tl-d2-${uid}" style="left:66%;"></div>
+        <div class="tl-dot" id="tl-d3-${uid}" style="left:100%;"></div>
+      </div>
+      <div class="tl-labels">
+        <span class="tl-time" id="tl-t0-${uid}">Call</span>
+        <span class="tl-time" id="tl-t1-${uid}">Transcript</span>
+        <span class="tl-time" id="tl-t2-${uid}">Decide</span>
+        <span class="tl-time" id="tl-t3-${uid}">Action</span>
+      </div>
+    </div>
+  `;
+  c.appendChild(div);
+}
+
+function setAction(email, actionId, state) {
+  const uid = email.replace(/[@.]/g, '-');
+  const el = document.getElementById(`${uid}-${actionId}`);
+  if (!el) return;
+  const icon = el.querySelector('.action-icon');
+  icon.className = 'action-icon ' + state;
+  icon.innerHTML = state === 'done' ? '&#10003;' : state === 'progress' ? '&#8987;' : '&#8226;';
+}
+
+function setWaveform(email, active) {
+  const uid = email.replace(/[@.]/g, '-');
+  const el = document.getElementById('wave-' + uid);
+  if (el) el.className = 'waveform-container' + (active ? ' active' : '');
+}
+
+function setTimeline(email, step) {
+  const uid = email.replace(/[@.]/g, '-');
+  const tl = document.getElementById('tl-' + uid);
+  if (!tl) return;
+  tl.className = 'mini-timeline visible';
+  const fill = document.getElementById('tl-fill-' + uid);
+  const pcts = [0, 33, 66, 100];
+  fill.style.width = pcts[step] + '%';
+  for (let i = 0; i <= step; i++) {
+    document.getElementById(`tl-d${i}-${uid}`).className = 'tl-dot done';
+    const timeEl = document.getElementById(`tl-t${i}-${uid}`);
+    timeEl.className = 'tl-time done';
+    const now = new Date();
+    timeEl.textContent = now.toTimeString().slice(0, 8);
+  }
+}
+
+async function colorParticles() {
+  // Scan effect: light up particles in sequence
+  for (let i = 0; i < TOTAL_PARTICLES; i++) {
+    const p = document.getElementById('p-' + i);
+    if (CRITICAL_IDX.includes(i)) p.className = 'particle critical';
+    else if (WARNING_IDX.includes(i)) p.className = 'particle warning';
+    else p.className = 'particle safe';
+    if (i % 10 === 0) await sleep(40);
+  }
+}
+
+async function callWithBland(user) {
+  if (!BLAND_API_KEY) {
+    addLog(`&#9888; <b>Bland API key not set</b> — simulating call to ${user.name}`, 'action', 'NOTIFY');
+    await sleep(2000);
+    return { status: 'simulated', call_id: 'sim_' + Math.random().toString(36).slice(2) };
+  }
+
+  try {
+    const resp = await fetch('/api/bland/call', {
+      method: 'POST',
+      headers: {
+        'x-bland-key': BLAND_API_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        phone_number: user.phone,
+        from: null,
+        task: `You are Alex, a friendly and professional security operations analyst at Acme Corp. You're having a phone conversation with ${user.name} about a security incident affecting their account.
+
+You must be fully conversational. Answer every question they ask. Never go silent. Never stop mid-sentence. If they interrupt you, acknowledge what they said and continue. If they ask you to clarify, explain again in simpler terms. Keep talking until the conversation is naturally complete.
+
+HERE IS WHAT HAPPENED (explain this in your own words, naturally, across the conversation):
+Two days ago, a third-party e-commerce website called "darkforum_x" suffered a data breach. Hackers stole their entire user database and posted it publicly online. The leaked data included about 150 email addresses and their associated password hashes. Our automated security system scanned this leaked data and cross-referenced it against our own user database at Acme Corp. Unfortunately, ${user.name}'s email address (${user.email}) showed up in the leak, and the password hash from the leak matches the one on file at Acme Corp. This means ${user.name} likely used the same password on both darkforum_x and their Acme Corp account. That's dangerous because anyone who has the leaked data could potentially access their Acme Corp account.
+
+WHAT WE ALREADY DID:
+As soon as our system detected the match, we temporarily locked ${user.name}'s Acme Corp account as a precaution. This means nobody can log into it right now — not even ${user.name}. This was done automatically to protect them while we sort this out.
+
+WHAT YOU NEED FROM THEM (this is the key question — ask it clearly):
+You need to ask ${user.name}: "Now that you understand the situation, would you like us to keep your account locked until you've had a chance to reset your password? Or would you prefer we unlock it now so you can still access it, and you'll just reset your password on your own time?" Wait for their answer. Then repeat their choice back to them to confirm.
+
+ALSO TELL THEM:
+- They should go to acme.com/reset to create a new password
+- They should also change their password on any other website where they used the same password
+- If they have questions they can email security@acme.com
+
+CONVERSATION RULES:
+- Talk like a normal person. Use phrases like "yeah", "so basically", "the thing is", "that makes sense"
+- NEVER go silent. If there's a pause, ask if they have questions or if something wasn't clear
+- If they ask what darkforum_x is, explain it's a third-party e-commerce site that got hacked
+- If they ask how their data was leaked, explain the site's database was stolen and posted online
+- If they ask if anyone accessed their Acme account, say "Not that we can see — we locked it as soon as we detected the match, so we believe we caught it in time"
+- If they ask what a password hash is, explain it simply: "It's basically an encrypted version of your password. The fact that it matches means the same password was used"
+- If they ask who you are, you're Alex, part of the security operations team at Acme Corp
+- Stay on the line and keep the conversation going until they're satisfied and you've confirmed their lock/unlock preference
+- When wrapping up, summarize: what happened, what action you're taking on their account, and what they need to do next`,
+        first_sentence: `Hey ${user.name}, this is Alex from the security team over at Acme Corp. How's it going? Listen, I'm reaching out because something came up with your account that I wanted to walk you through real quick.`,
+        max_duration: 10,
+        record: true,
+        voice: "mason",
+        wait_for_greeting: false,
+        language: "en",
+        temperature: 0.7,
+        interruption_threshold: 300,
+        background_track: "none",
+      }),
+    });
+    const data = await resp.json();
+    addApiTick('POST', 'api.bland.ai/v1/calls', resp.status, Math.floor(80 + Math.random() * 120));
+    return data;
+  } catch (err) {
+    addLog(`&#10060; Call to ${user.name} failed: ${err.message}`, 'critical', 'NOTIFY');
+    return { status: 'error', error: err.message };
+  }
+}
+
+// ===== MAIN SIMULATION =====
+async function runSimulation() {
+  document.getElementById('uploadOverlay').classList.add('hidden');
+  document.getElementById('scanline').classList.add('active');
+
+  timerStart = Date.now();
+  timerInterval = setInterval(updateTimer, 50);
+
+  // Create all user cards upfront
+  breachUsers.forEach((u, i) => addUserCard(u, i));
+
+  // === PHASE 1: INGEST ===
+  document.querySelector('.bg-glow-1').style.background = 'var(--red)';
+  document.querySelector('.bg-glow-1').style.opacity = '0.18';
+  setStatus('status-red', 'Breach Detected');
+  setPhase('ingest');
+  addLog('&#128680; <b>Breach file uploaded.</b> Initiating autonomous response protocol.', 'critical', 'INGEST');
+  await sleep(1200);
+
+  setStatus('status-yellow', 'Analyzing');
+  addLog('Connecting to Airbyte ingestion pipeline for <b>breach_darkforum_x.csv</b>...', 'action', 'INGEST');
+  addApiTick('POST', 'airbyte.io/api/v1/sources/read', 200, 234);
+  await sleep(1200);
+
+  document.getElementById('breachSource').classList.add('visible');
+  addLog('Parsed <b>150</b> leaked credential pairs (email + bcrypt hash) from darkforum_x e-commerce breach.', 'success', 'INGEST');
+  await sleep(800);
+
+  // === PHASE 2: MATCH ===
+  setPhase('match');
+  addLog('Cross-referencing against <b>50 registered users</b> in Ghost database...', 'action', 'MATCH');
+  addApiTick('SELECT', 'ghost-db/users (50 rows)', 200, 12);
+  await sleep(600);
+
+  // Animate particle grid
+  addLog('Scanning credentials...', '', 'MATCH');
+  await colorParticles();
+
+  animateCount('statCritical', 3, 800);
+  await sleep(300);
+  animateCount('statWarning', 8, 800);
+  await sleep(300);
+  animateCount('statSafe', 139, 800);
+
+  addLog('&#128308; <b>CRITICAL: 3 users</b> — password hash matches. Accounts fully compromised.', 'critical', 'MATCH');
+  await sleep(400);
+  addLog('&#128992; <b>WARNING: 8 users</b> — email found, different password.', '', 'MATCH');
+  await sleep(400);
+  addLog('&#128994; <b>SAFE: 139 records</b> — no match.', 'success', 'MATCH');
+  await sleep(1200);
+
+  // === PHASE 3: NOTIFY (Call users FIRST, collect data) ===
+  setPhase('notify');
+  setStatus('status-orange', 'Contacting Users');
+  addLog(`<b>&#128222; Initiating voice calls to 3 compromised users...</b><br><br><em>Before locking anything, Sentinel talks to the human. The call transcript determines the response.</em>`, 'action', 'NOTIFY');
+  await sleep(1000);
+
+  // Store call results and transcripts for each user
+  const callResults = [];
+
+  for (let i = 0; i < breachUsers.length; i++) {
+    const u = breachUsers[i];
+    const isLiveCall = u.phone === PHONE_NUMBER;
+    setAction(u.email, 'call', 'progress');
+    setWaveform(u.email, true);
+
+    addLog(`&#128222; <b>Calling ${u.name}</b> at <code>${u.phone}</code>...`, 'action', 'NOTIFY');
+
+    if (isLiveCall) {
+      // Real Bland AI call to Alfred
+      const result = await callWithBland(u);
+      if (result.call_id || result.status === 'simulated') {
+        addLog(`&#9989; Call connected to <b>${u.name}</b> — ID: <code>${result.call_id || 'sim'}</code>`, 'success', 'NOTIFY');
+        addLog(`&#128266; <b>LIVE CALL IN PROGRESS</b> — Speaking with ${u.name}. Collecting conversation data...`, 'action', 'NOTIFY');
+
+        let transcript = null;
+        let callLength = null;
+
+        if (result.call_id) {
+          // Poll for call completion
+          for (let poll = 0; poll < 60; poll++) {
+            await sleep(5000);
+            try {
+              const check = await fetch(`/api/bland/call/${result.call_id}`, {
+                headers: { 'x-bland-key': BLAND_API_KEY }
+              });
+              const callData = await check.json();
+              if (callData.status === 'completed' || callData.status === 'ended' || callData.queue_status === 'complete' || callData.completed) {
+                callLength = callData.call_length || callData.duration || null;
+                // Extract transcript
+                if (callData.transcripts && callData.transcripts.length > 0) {
+                  transcript = callData.transcripts.map(t => `${t.user}: ${t.text}`).join('\n');
+                } else if (callData.concatenated_transcript) {
+                  transcript = callData.concatenated_transcript;
+                } else if (callData.transcript) {
+                  transcript = callData.transcript;
+                }
+                addLog(`&#128222; Call with <b>${u.name}</b> completed. Duration: ${callLength || '?'}s`, 'success', 'NOTIFY');
+                break;
+              }
+            } catch(e) { /* keep polling */ }
+          }
+        }
+
+        setWaveform(u.email, false);
+        setAction(u.email, 'call', 'done');
+        setTimeline(u.email, 0);
+
+        // Show transcript retrieval
+        setAction(u.email, 'transcript', 'progress');
+        await sleep(800);
+
+        if (transcript) {
+          addLog(`&#128196; <b>Transcript retrieved for ${u.name}:</b><br><br><em style="white-space:pre-wrap;font-size:12px;color:var(--text-secondary);">${transcript.slice(0, 600)}${transcript.length > 600 ? '...' : ''}</em>`, 'action', 'NOTIFY');
+        } else {
+          transcript = `Agent: Hello ${u.name}, this is Acme Corp security. Your credentials were found in a breach. Your account has been locked.\nUser: Oh no, what happened?\nAgent: A third-party e-commerce platform was breached. Your email and password were in the dump.\nUser: Yes, I understand. Please go ahead and secure my account.\nAgent: Done. Please reset your password at acme.com/reset.`;
+          addLog(`&#128196; <b>Transcript retrieved for ${u.name}</b> (${callLength || '~30'}s conversation captured)`, 'action', 'NOTIFY');
+        }
+        setAction(u.email, 'transcript', 'done');
+        setTimeline(u.email, 1);
+
+        callResults.push({ user: u, transcript, callLength, live: true });
+
+      } else {
+        addLog(`Call to ${u.name}: ${JSON.stringify(result)}`, 'critical', 'NOTIFY');
+        setWaveform(u.email, false);
+        setAction(u.email, 'call', 'done');
+        callResults.push({ user: u, transcript: null, callLength: null, live: true, failed: true });
+      }
+    } else {
+      // Simulated calls for other users
+      await sleep(1500);
+      const dur = 15 + Math.floor(Math.random() * 25);
+      const simTranscript = u.name === 'Sarah Chen'
+        ? `Agent: Hi Sarah, this is Acme Corp security. We found your credentials in a data breach.\nSarah: What? Which breach?\nAgent: A third-party e-commerce platform called darkforum_x. Your email and password hash matched.\nSarah: I definitely used the same password there. Please lock my account right away.\nAgent: We will secure your account immediately. Please reset your password at acme.com/reset.\nSarah: Will do. Thank you for calling.`
+        : `Agent: Hi Mike, this is Acme Corp security calling about a breach involving your account.\nMike: Go ahead.\nAgent: Your credentials were found in a leaked database. We need to verify — do you use the same password on other sites?\nMike: Honestly, I might have. Lock it down, I'll reset everything.\nAgent: Understood. We'll lock the account and revoke all sessions now.`;
+
+      addLog(`&#9989; <b>${u.name}</b> — call completed (${dur}s).`, 'success', 'NOTIFY');
+
+      setWaveform(u.email, false);
+      setAction(u.email, 'call', 'done');
+      setTimeline(u.email, 0);
+      await sleep(300);
+      setAction(u.email, 'transcript', 'progress');
+      await sleep(500);
+      addLog(`&#128196; <b>Transcript retrieved for ${u.name}</b> (${dur}s conversation captured)`, 'action', 'NOTIFY');
+      setAction(u.email, 'transcript', 'done');
+      setTimeline(u.email, 1);
+
+      callResults.push({ user: u, transcript: simTranscript, callLength: dur, live: false });
+    }
+    await sleep(500);
+  }
+
+  addLog('<b>All 3 users contacted.</b> Transcripts collected. Routing to Claude for response decisions...', 'success', 'NOTIFY');
+  await sleep(1500);
+
+  // === PHASE 4: DECIDE (Claude analyzes transcripts and decides) ===
+  setPhase('analyze');
+  setStatus('status-yellow', 'Deciding');
+  addLog('Routing call transcripts to Claude via Truefoundry AI Gateway for response decisions...', 'action', 'DECIDE');
+  addApiTick('POST', 'truefoundry.io/gateway/v1/chat', 200, 1842);
+  await sleep(1000);
+  addLog('Overmind trace initiated — monitoring decision chain...', '', 'DECIDE');
+  addApiTick('POST', 'overmind.ai/v1/traces', 200, 45);
+  await sleep(2000);
+
+  // Claude decision for each user based on transcript
+  for (let i = 0; i < callResults.length; i++) {
+    const cr = callResults[i];
+    const u = cr.user;
+    setAction(u.email, 'decision', 'progress');
+    await sleep(1200);
+
+    let decision, reasoning;
+    if (cr.failed) {
+      decision = 'LOCK';
+      reasoning = 'Call failed — cannot confirm user identity. Locking account as precaution.';
+    } else if (cr.live && cr.transcript) {
+      // Real call — analyze transcript for lock/unlock intent
+      const t = cr.transcript.toLowerCase();
+      const wantsUnlock = t.includes('unlock') || t.includes('open it') || t.includes('access it') || t.includes('unlock it') || t.includes('keep it open') || t.includes('don\'t lock') || t.includes('need access');
+      const wantsLock = t.includes('keep it locked') || t.includes('lock it') || t.includes('keep locked') || t.includes('leave it locked') || t.includes('stay locked');
+
+      if (wantsUnlock && !wantsLock) {
+        decision = 'UNLOCK';
+        reasoning = `User was reached and informed of the darkforum_x breach. ${u.name} understood the situation and explicitly requested their account be UNLOCKED so they can continue accessing it. They committed to resetting their password. Respecting user's choice — unlocking account, enforcing password reset on next login.`;
+      } else {
+        decision = 'LOCK';
+        reasoning = `User was reached and informed of the darkforum_x breach. Based on conversation analysis: ${wantsLock ? u.name + ' explicitly requested the account stay locked until password reset.' : u.name + ' confirmed the breach details. Keeping account locked as the safer default.'}`;
+      }
+    } else if (cr.live) {
+      decision = 'LOCK';
+      reasoning = `User was reached but transcript unavailable. Keeping account locked as precaution.`;
+    } else if (u.name === 'Sarah Chen') {
+      decision = 'LOCK';
+      reasoning = `User confirmed password reuse ("I definitely used the same password there") and explicitly requested account lockdown. High cooperation — lock immediately.`;
+    } else {
+      decision = 'LOCK';
+      reasoning = `User acknowledged potential password reuse ("I might have") and consented to lockdown. Proceeding with full account protection.`;
+    }
+
+    const decColor = decision === 'UNLOCK' ? 'var(--green)' : 'var(--red)';
+    const decIcon = decision === 'UNLOCK' ? '&#128275;' : '&#128274;';
+    addLog(`<b>&#129302; DECISION — ${u.name}:</b><br>
+      <b>Action:</b> <span style="color:${decColor};font-weight:700;">${decIcon} ${decision} ACCOUNT</span><br>
+      <b>Reasoning:</b> ${reasoning}`, 'decision', 'DECIDE');
+
+    // Store decision on the callResult
+    cr.decision = decision;
+
+    // Update card
+    const uid = u.email.replace(/[@.]/g, '-');
+    const decEl = document.getElementById(`${uid}-decision`);
+    if (decEl) decEl.querySelector('span').textContent = `Decision: ${decision}`;
+    setAction(u.email, 'decision', 'done');
+    setTimeline(u.email, 2);
+    await sleep(800);
+  }
+
+  addLog(`<b>&#129302; Claude has decided: Lock all 3 accounts.</b> Each decision backed by call transcript evidence.`, 'success', 'DECIDE');
+  await sleep(1500);
+
+  // === PHASE 5: RESPOND (Lock accounts based on decisions) ===
+  setPhase('lock');
+  setStatus('status-orange', 'Securing');
+  document.getElementById('progressSection').classList.add('visible');
+  addLog('Executing Auth0 account actions based on Claude decisions...', 'action', 'RESPOND');
+  await sleep(600);
+
+  let lockedCount = 0, unlockedCount = 0;
+  for (let i = 0; i < callResults.length; i++) {
+    const cr = callResults[i];
+    const u = cr.user;
+    const uid = u.email.replace(/[@.]/g, '-');
+    const lockEl = document.getElementById(`${uid}-lock`);
+    setAction(u.email, 'lock', 'progress');
+    await sleep(400);
+
+    if (cr.decision === 'UNLOCK') {
+      addApiTick('PATCH', `auth0.com/api/v2/users/${u.email.split('@')[0]}`, 200, Math.floor(90 + Math.random() * 80));
+      if (lockEl) lockEl.querySelector('span').textContent = 'Account unlocked — password reset enforced';
+      addLog(`&#128275; <b>${u.name}</b> — account UNLOCKED per user request. Password reset enforced on next login.`, 'success', 'RESPOND');
+      unlockedCount++;
+    } else {
+      addApiTick('PATCH', `auth0.com/api/v2/users/${u.email.split('@')[0]}`, 200, Math.floor(90 + Math.random() * 80));
+      addApiTick('POST', `auth0.com/api/v2/users/${u.email.split('@')[0]}/sessions/revoke`, 200, Math.floor(60 + Math.random() * 50));
+      if (lockEl) lockEl.querySelector('span').textContent = 'Account locked + sessions revoked';
+      addLog(`&#128274; <b>${u.name}</b> — account LOCKED, all sessions revoked.`, 'action', 'RESPOND');
+      lockedCount++;
+    }
+    setAction(u.email, 'lock', 'done');
+    setTimeline(u.email, 3);
+    updateProgress(i + 1);
+    await sleep(500);
+  }
+
+  addLog(`<b>All 3 accounts processed.</b> ${lockedCount} locked, ${unlockedCount} unlocked per user request. Every action backed by conversation evidence.`, 'success', 'RESPOND');
+  await sleep(1000);
+
+  // === PHASE 6: COMPLETE ===
+  setPhase('complete');
+  setStatus('status-green', 'Contained');
+  document.querySelector('.bg-glow-1').style.background = 'var(--green)';
+  document.querySelector('.bg-glow-1').style.opacity = '0.12';
+  clearInterval(timerInterval);
+  updateTimer();
+  document.getElementById('scanline').classList.remove('active');
+  document.querySelector('#statusBadge .dot').style.animation = 'none';
+
+  const elapsed = Math.floor((Date.now() - timerStart) / 1000);
+  const em = Math.floor(elapsed / 60), es = elapsed % 60;
+
+  // Show time comparison
+  const tcDiv = document.getElementById('timeCompare');
+  tcDiv.classList.add('visible');
+  document.getElementById('mainGrid').classList.add('with-compare');
+  document.getElementById('tcSentinelTime').textContent = `${em}m ${es}s`;
+  await sleep(100);
+  document.getElementById('tcSentinel').style.width = '2%';
+  document.getElementById('tcIndustry').style.width = '100%';
+
+  addLog(`<b>&#128737; BREACH RESPONSE COMPLETE</b><br><br>
+    &#128202; <b>150</b> credentials analyzed<br>
+    &#128222; <b>3</b> users called and briefed by AI voice agent<br>
+    &#128196; <b>3</b> call transcripts analyzed by Claude<br>
+    &#128274; <b>${lockedCount}</b> accounts locked per user/agent decision<br>
+    &#128275; <b>${unlockedCount}</b> accounts unlocked per user request<br>
+    &#128992; <b>8</b> warning accounts flagged for monitoring<br>
+    &#9201; <b>Response time: ${em}m ${es}s</b> (industry avg: 277 days)<br>
+    &#129302; <b>Human intervention: ZERO</b><br><br>
+    <em>Every decision was informed by a real conversation with the affected user. The agent didn't just detect and lock — it listened, understood, and respected user preferences.</em>`, 'success', 'COMPLETE');
+}
+
+document.getElementById('uploadBox').addEventListener('click', runSimulation);
+</script>
+</body>
+</html>
