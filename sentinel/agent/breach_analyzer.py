@@ -33,6 +33,10 @@ async def ingest_breach_csv(csv_content: str) -> int:
     if not rows:
         return 0
 
+    # Clear stale breach events from previous runs to prevent duplicates
+    await ghost_db.execute("DELETE FROM response_log")
+    await ghost_db.execute("DELETE FROM breach_events")
+
     # Batch insert using executemany for speed (single round-trip)
     pool = await ghost_db.get_pool()
     await pool.executemany(
