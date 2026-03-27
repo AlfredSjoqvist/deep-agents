@@ -1,0 +1,36 @@
+{
+  "scenarios": [
+    {
+      "id": "credential_stuffing",
+      "name": "Credential Stuffing Attack",
+      "file": "credential_stuffing.csv",
+      "breach_source": "HaveIBeenPwned Compilation 2026",
+      "description": "Large-scale credential stuffing from compiled breach databases. Similar to the 23andMe incident where 6.9M profiles were exposed.",
+      "incident_type": "credential_stuffing",
+      "expected_matches": 45,
+      "expected_critical": 15,
+      "demo_talking_points": [
+        "Attackers compiled credentials from 50+ previous breaches",
+        "Automated tools tested against Acme Corp login endpoints",
+        "15 employees reused passwords from previously breached services",
+        "Similar to 23andMe (2023): data-sharing amplified impact"
+      ]
+    },
+    {
+      "id": "phishing_campaign",
+      "name": "Targeted Phishing Campaign (APT29)",
+      "file": "phishing_campaign.csv",
+      "breach_source": "PhishTank Campaign APT29 2026",
+      "description": "Sophisticated phishing campaign impersonating Acme Corp SSO. Employees entered credentials on convincing fake login pages.",
+      "incident_type": "phishing",
+      "expected_matches": 50,
+      "expected_critical": 20,
+      "demo_talking_points": [
+        "Spear-phishing emails sent to 300 employees",
+        "Fake SSO pages nearly identical to real Acme login",
+        "20 employees entered their actual passwords",
+        "Phishing is the #1 initial access vector in breaches"
+      ]
+    }
+  ]
+}
