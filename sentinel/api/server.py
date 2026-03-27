@@ -55,12 +55,12 @@ app.add_middleware(
 )
 
 # ── In-Memory Run Store ──────────────────────────────────────────────────────
-# Each run is keyed by run_id and stores the result + an asyncio.Queue for SSE.
+# Each run is keyed by run_id and stores the result.
+# The event Queue lives in the orchestrator module (keyed by run_id).
 
 _runs: dict[str, dict] = {}
 # _runs[run_id] = {
 #     "result": SentinelResult | None,
-#     "queue": asyncio.Queue,
 #     "done": bool,
 # }
 
@@ -81,62 +81,28 @@ async def _run_pipeline(
     breach_source: str,
     breach_csv_content: str | None = None,
 ) -> None:
-    """Execute the Sentinel pipeline in a background task, pushing events to the queue."""
-    # Import here to avoid circular imports and let the module load without DB deps
-    from sentinel.agent.orchestrator import SentinelResult, run_sentinel, _events as orchestrator_events
+    """Execute the Sentinel pipeline in a background task.
+
+    The orchestrator pushes events directly to its own asyncio.Queue (keyed
+    by run_id) and sends a None sentinel when the pipeline finishes.  The
+    SSE endpoint reads from that same Queue, so there is no polling delay.
+    """
+    from sentinel.agent.orchestrator import SentinelResult, run_sentinel
 
     run = _runs[run_id]
-    queue: asyncio.Queue = run["queue"]
 
-    # Snapshot the orchestrator's global _events list length before we start
-    # so we can detect new events emitted during our run.
-    # But first, clear the global list to avoid stale events from prior runs.
-    orchestrator_events.clear()
-    last_seen = 0
-
-    # Launch the pipeline in a wrapper that polls for new events
-    pipeline_task = asyncio.create_task(
-        run_sentinel(
+    try:
+        result = await run_sentinel(
             breach_csv_content=breach_csv_content,
             breach_source=breach_source,
+            run_id=run_id,
         )
-    )
-
-    # Poll the orchestrator's _events list and forward new events to the queue
-    while not pipeline_task.done():
-        current_len = len(orchestrator_events)
-        while last_seen < current_len:
-            evt = orchestrator_events[last_seen]
-            await queue.put(evt)
-            last_seen += 1
-        await asyncio.sleep(0.1)
-
-    # Drain any remaining events after the task completes
-    current_len = len(orchestrator_events)
-    while last_seen < current_len:
-        evt = orchestrator_events[last_seen]
-        await queue.put(evt)
-        last_seen += 1
-
-    # Store result
-    try:
-        result = pipeline_task.result()
         run["result"] = result
     except Exception as exc:
         log.exception("sentinel.pipeline_background_error", run_id=run_id)
-        error_evt = {
-            "type": "error",
-            "message": f"Pipeline failed: {exc}",
-            "data": {"error": str(exc)},
-            "timestamp": time.time(),
-        }
-        await queue.put(error_evt)
-        # Build a minimal error result
         run["result"] = SentinelResult(status="error")
 
-    # Signal done
     run["done"] = True
-    await queue.put(None)  # sentinel value to stop SSE stream
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
@@ -183,11 +149,14 @@ async def trigger_pipeline(
         # No body and no file — use defaults (sample CSV)
         pass
 
-    # Set up the run record
-    queue: asyncio.Queue = asyncio.Queue()
+    # Pre-create the orchestrator's event Queue so the SSE endpoint can
+    # connect before the background task calls run_sentinel().
+    from sentinel.agent.orchestrator import ensure_event_queue
+    ensure_event_queue(run_id)
+
+    # Set up the run record.
     _runs[run_id] = {
         "result": None,
-        "queue": queue,
         "done": False,
     }
 
@@ -200,16 +169,27 @@ async def trigger_pipeline(
 
 @app.get("/api/events/{run_id}")
 async def event_stream(run_id: str):
-    """SSE stream of real-time pipeline events."""
-    run = _get_run(run_id)
-    queue: asyncio.Queue = run["queue"]
+    """SSE stream of real-time pipeline events.
+
+    Reads directly from the orchestrator's asyncio.Queue for this run_id,
+    yielding each event immediately as it arrives (no polling, no batching).
+    A None sentinel from the queue signals end-of-stream.
+    """
+    from sentinel.agent.orchestrator import get_event_queue
+
+    # Validate run exists
+    _get_run(run_id)
+
+    queue = get_event_queue(run_id)
+    if queue is None:
+        raise HTTPException(status_code=404, detail=f"No event queue for run {run_id}")
 
     async def _generate():
         while True:
             try:
                 evt = await asyncio.wait_for(queue.get(), timeout=60.0)
             except asyncio.TimeoutError:
-                # Send a keep-alive comment
+                # Send a keep-alive comment so the connection stays open
                 yield {"event": "ping", "data": "keep-alive"}
                 continue
 
@@ -221,9 +201,15 @@ async def event_stream(run_id: str):
                 }
                 return
 
+            # evt is a PipelineEvent (Pydantic model) — serialize via model_dump
+            if hasattr(evt, "model_dump"):
+                payload = evt.model_dump()
+            else:
+                payload = evt
+
             yield {
                 "event": "message",
-                "data": json.dumps(evt, default=str),
+                "data": json.dumps(payload, default=str),
             }
 
     return EventSourceResponse(_generate())
