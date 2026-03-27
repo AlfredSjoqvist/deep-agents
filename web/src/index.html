@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sentinel — Autonomous Breach Response</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1f6e1;</text></svg>">
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- ── Sidebar ──────────────────────────────────────────── -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">Integrations</span>
+        <button class="sidebar-close" id="sidebar-close" title="Collapse sidebar">&times;</button>
+      </div>
+      <div id="integrations-list">
+        <div class="integration-loading">Checking integrations...</div>
+      </div>
+    </aside>
+
+    <!-- ── Main Content ─────────────────────────────────────── -->
+    <main class="main-content">
+      <button class="sidebar-toggle" id="sidebar-toggle" title="Show integrations">&#9776;</button>
+
+      <!-- Header -->
+      <header class="sentinel-header">
+        <div class="header-content">
+          <span class="shield-icon">&#x1f6e1;&#xfe0f;</span>
+          <div class="header-text">
+            <h1>SENTINEL</h1>
+            <div class="subtitle">Autonomous Breach Response Agent</div>
+          </div>
+          <div class="header-right">
+            <div class="header-badge">&#x26a0;&#xfe0f; DEEP AGENTS HACKATHON 2026</div>
+            <div class="status-indicator idle" id="global-status">
+              <span class="connection-dot"></span>
+              <span id="global-status-text">IDLE</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Content Grid -->
+      <div class="content-grid">
+
+        <!-- Left Panel -->
+        <div class="left-panel">
+
+          <!-- Phase Timeline -->
+          <div class="phase-timeline-card">
+            <div class="section-header">
+              <span class="icon">&#x1f504;</span> Pipeline Phase Timeline
+            </div>
+            <div class="phase-timeline">
+              <div class="phase-node">
+                <div class="phase-circle pending" id="phase-ingest">1</div>
+                <div class="phase-label" id="phase-ingest-label">INGEST</div>
+              </div>
+              <div class="phase-connector pending" id="connector-1-2"></div>
+              <div class="phase-node">
+                <div class="phase-circle pending" id="phase-research">2</div>
+                <div class="phase-label" id="phase-research-label">RESEARCH</div>
+              </div>
+              <div class="phase-connector pending" id="connector-2-3"></div>
+              <div class="phase-node">
+                <div class="phase-circle pending" id="phase-respond">3</div>
+                <div class="phase-label" id="phase-respond-label">RESPOND</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Metric Cards -->
+          <div class="metrics-row">
+            <div class="metric-card info">
+              <span class="metric-icon">&#x1f4c4;</span>
+              <div class="metric-value" id="metric-records">0</div>
+              <div class="metric-label">Breach Records</div>
+            </div>
+            <div class="metric-card warning">
+              <span class="metric-icon">&#x1f50d;</span>
+              <div class="metric-value" id="metric-matches">0</div>
+              <div class="metric-label">Matches</div>
+            </div>
+            <div class="metric-card critical">
+              <span class="metric-icon">&#x1f6a8;</span>
+              <div class="metric-value" id="metric-critical">0</div>
+              <div class="metric-label">Critical</div>
+            </div>
+            <div class="metric-card safe">
+              <span class="metric-icon">&#x1f512;</span>
+              <div class="metric-value" id="metric-locked">0</div>
+              <div class="metric-label">Accts Locked</div>
+            </div>
+            <div class="metric-card purple">
+              <span class="metric-icon">&#x1f4de;</span>
+              <div class="metric-value" id="metric-called">0</div>
+              <div class="metric-label">Users Called</div>
+            </div>
+          </div>
+
+          <!-- Agent Reasoning Stream -->
+          <div class="event-log-container">
+            <div class="event-log-header">
+              <span class="terminal-dot red"></span>
+              <span class="terminal-dot yellow"></span>
+              <span class="terminal-dot green"></span>
+              <span class="title">Agent Reasoning Stream</span>
+            </div>
+            <div class="event-log-body" id="event-log">
+              <div class="event-log-empty" id="event-log-empty">Waiting for Sentinel activation...</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel">
+
+          <!-- Incident Report -->
+          <div class="report-panel" id="report-panel">
+            <div class="section-header">
+              <span class="icon">&#x1f4cb;</span> Incident Report
+            </div>
+            <div id="report-content">
+              <div class="report-empty">No incident data yet. Trigger Sentinel to begin analysis.</div>
+            </div>
+          </div>
+
+          <!-- Incident Classification -->
+          <div class="classification-card" id="classification-card">
+            <div class="section-header">
+              <span class="icon">&#x1f3af;</span> Incident Classification
+            </div>
+            <div id="classification-content">
+              <div class="report-empty">Classification will appear after research phase.</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Bottom Controls -->
+      <div class="bottom-controls">
+        <button class="trigger-btn pulsing" id="trigger-btn">
+          &#x26a1; TRIGGER SENTINEL
+        </button>
+        <div class="divider-v"></div>
+        <div class="control-group">
+          <div class="file-upload-wrapper">
+            <input type="file" id="csv-upload" class="file-upload-input" accept=".csv">
+            <button class="file-upload-btn" id="csv-upload-btn">
+              &#x1f4c1; Upload Breach CSV
+            </button>
+          </div>
+        </div>
+        <div class="divider-v"></div>
+        <div class="checkbox-wrapper">
+          <input type="checkbox" id="use-sample" checked>
+          <label for="use-sample">Use sample breach data</label>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Connection status bar -->
+  <div class="connection-bar waiting" id="connection-bar">
+    <span class="connection-dot"></span>
+    <span id="connection-text">Checking backend connection...</span>
+  </div>
+
+  <script src="/app.ts"></script>
+</body>
+</html>
