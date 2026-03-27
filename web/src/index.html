@@ -43,81 +43,174 @@
         </div>
       </header>
 
+      <!-- ── Data Pipeline Visualization ────────────────────── -->
+      <div class="pipeline-card">
+        <div class="section-header">
+          <span class="icon">&#x1f504;</span> DATA PIPELINE
+          <span class="pipeline-header-sub">Sponsor-Powered Breach Response Flow</span>
+        </div>
+
+        <!-- Overmind Trace Line -->
+        <div class="overmind-trace" id="overmind-trace">
+          <div class="overmind-trace-line"></div>
+          <span class="overmind-trace-label">
+            <span class="overmind-dot"></span>
+            Overmind &mdash; Decision Tracing
+          </span>
+        </div>
+
+        <div class="pipeline-flow" id="pipeline-flow">
+          <!-- Node: Breach CSV -->
+          <div class="pipeline-node" data-node="breach-csv">
+            <div class="pipeline-circle pending" id="node-breach-csv">
+              <span class="node-icon">&#x1f4c4;</span>
+            </div>
+            <div class="pipeline-node-label" id="label-breach-csv">Breach CSV</div>
+          </div>
+
+          <div class="pipeline-connector pending" id="conn-0-1">
+            <div class="connector-line"></div>
+          </div>
+
+          <!-- Node: Ingest -->
+          <div class="pipeline-node" data-node="ingest">
+            <div class="pipeline-circle pending" id="node-ingest">
+              <span class="node-icon">&#x1f4e5;</span>
+            </div>
+            <div class="pipeline-node-label" id="label-ingest">Ingest</div>
+            <div class="sponsor-badge" style="--badge-color: #7C3AED;">Ghost DB</div>
+          </div>
+
+          <div class="pipeline-connector pending" id="conn-1-2">
+            <div class="connector-line"></div>
+          </div>
+
+          <!-- Node: Match Users -->
+          <div class="pipeline-node" data-node="match">
+            <div class="pipeline-circle pending" id="node-match">
+              <span class="node-icon">&#x1f50d;</span>
+            </div>
+            <div class="pipeline-node-label" id="label-match">Match Users</div>
+            <div class="sponsor-badge" style="--badge-color: #7C3AED;">Aerospike</div>
+          </div>
+
+          <div class="pipeline-connector pending" id="conn-2-3">
+            <div class="connector-line"></div>
+          </div>
+
+          <!-- Node: Research CVE -->
+          <div class="pipeline-node" data-node="research">
+            <div class="pipeline-circle pending" id="node-research">
+              <span class="node-icon">&#x1f52c;</span>
+            </div>
+            <div class="pipeline-node-label" id="label-research">Research CVE</div>
+            <div class="sponsor-badges-group">
+              <div class="sponsor-badge" style="--badge-color: #D4A574;">Claude</div>
+              <div class="sponsor-badge" style="--badge-color: #10B981;">Senso</div>
+              <div class="sponsor-badge sub-badge" style="--badge-color: #F59E0B;">Truefoundry</div>
+            </div>
+          </div>
+
+          <div class="pipeline-connector pending" id="conn-3-4">
+            <div class="connector-line"></div>
+          </div>
+
+          <!-- Node: Lock Accounts -->
+          <div class="pipeline-node" data-node="lockdown">
+            <div class="pipeline-circle pending" id="node-lockdown">
+              <span class="node-icon">&#x1f512;</span>
+            </div>
+            <div class="pipeline-node-label" id="label-lockdown">Lock Accounts</div>
+            <div class="sponsor-badge" style="--badge-color: #EB5424;">Auth0</div>
+          </div>
+
+          <div class="pipeline-connector pending" id="conn-4-5">
+            <div class="connector-line"></div>
+          </div>
+
+          <!-- Node: Call Users -->
+          <div class="pipeline-node" data-node="notify">
+            <div class="pipeline-circle pending" id="node-notify">
+              <span class="node-icon">&#x1f4de;</span>
+            </div>
+            <div class="pipeline-node-label" id="label-notify">Call Users</div>
+            <div class="sponsor-badge" style="--badge-color: #2563EB;">Bland AI</div>
+          </div>
+
+          <div class="pipeline-connector pending" id="conn-5-6">
+            <div class="connector-line"></div>
+          </div>
+
+          <!-- Node: Log Results -->
+          <div class="pipeline-node" data-node="complete">
+            <div class="pipeline-circle pending" id="node-complete">
+              <span class="node-icon">&#x1f4cb;</span>
+            </div>
+            <div class="pipeline-node-label" id="label-complete">Log Results</div>
+            <div class="sponsor-badge" style="--badge-color: #7C3AED;">Ghost DB</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Metric Cards ───────────────────────────────────── -->
+      <div class="metrics-row">
+        <div class="metric-card info">
+          <span class="metric-icon">&#x1f4c4;</span>
+          <div class="metric-value" id="metric-records">0</div>
+          <div class="metric-label">Breach Records</div>
+        </div>
+        <div class="metric-card warning">
+          <span class="metric-icon">&#x1f50d;</span>
+          <div class="metric-value" id="metric-matches">0</div>
+          <div class="metric-label">Matches</div>
+        </div>
+        <div class="metric-card critical">
+          <span class="metric-icon">&#x1f6a8;</span>
+          <div class="metric-value" id="metric-critical">0</div>
+          <div class="metric-label">Critical</div>
+        </div>
+        <div class="metric-card safe">
+          <span class="metric-icon">&#x1f512;</span>
+          <div class="metric-value" id="metric-locked">0</div>
+          <div class="metric-label">Accts Locked</div>
+        </div>
+        <div class="metric-card purple">
+          <span class="metric-icon">&#x1f4de;</span>
+          <div class="metric-value" id="metric-called">0</div>
+          <div class="metric-label">Users Called</div>
+        </div>
+      </div>
+
       <!-- Content Grid -->
       <div class="content-grid">
 
-        <!-- Left Panel -->
+        <!-- Left Panel: Agent Activity Feed -->
         <div class="left-panel">
-
-          <!-- Phase Timeline -->
-          <div class="phase-timeline-card">
-            <div class="section-header">
-              <span class="icon">&#x1f504;</span> Pipeline Phase Timeline
-            </div>
-            <div class="phase-timeline">
-              <div class="phase-node">
-                <div class="phase-circle pending" id="phase-ingest">1</div>
-                <div class="phase-label" id="phase-ingest-label">INGEST</div>
-              </div>
-              <div class="phase-connector pending" id="connector-1-2"></div>
-              <div class="phase-node">
-                <div class="phase-circle pending" id="phase-research">2</div>
-                <div class="phase-label" id="phase-research-label">RESEARCH</div>
-              </div>
-              <div class="phase-connector pending" id="connector-2-3"></div>
-              <div class="phase-node">
-                <div class="phase-circle pending" id="phase-respond">3</div>
-                <div class="phase-label" id="phase-respond-label">RESPOND</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Metric Cards -->
-          <div class="metrics-row">
-            <div class="metric-card info">
-              <span class="metric-icon">&#x1f4c4;</span>
-              <div class="metric-value" id="metric-records">0</div>
-              <div class="metric-label">Breach Records</div>
-            </div>
-            <div class="metric-card warning">
-              <span class="metric-icon">&#x1f50d;</span>
-              <div class="metric-value" id="metric-matches">0</div>
-              <div class="metric-label">Matches</div>
-            </div>
-            <div class="metric-card critical">
-              <span class="metric-icon">&#x1f6a8;</span>
-              <div class="metric-value" id="metric-critical">0</div>
-              <div class="metric-label">Critical</div>
-            </div>
-            <div class="metric-card safe">
-              <span class="metric-icon">&#x1f512;</span>
-              <div class="metric-value" id="metric-locked">0</div>
-              <div class="metric-label">Accts Locked</div>
-            </div>
-            <div class="metric-card purple">
-              <span class="metric-icon">&#x1f4de;</span>
-              <div class="metric-value" id="metric-called">0</div>
-              <div class="metric-label">Users Called</div>
-            </div>
-          </div>
-
-          <!-- Agent Reasoning Stream -->
-          <div class="event-log-container">
+          <div class="activity-feed-container">
             <div class="event-log-header">
               <span class="terminal-dot red"></span>
               <span class="terminal-dot yellow"></span>
               <span class="terminal-dot green"></span>
-              <span class="title">Agent Reasoning Stream</span>
+              <span class="title">Agent Activity Feed</span>
             </div>
             <div class="event-log-body" id="event-log">
               <div class="event-log-empty" id="event-log-empty">Waiting for Sentinel activation...</div>
             </div>
           </div>
-
         </div>
 
         <!-- Right Panel -->
         <div class="right-panel">
+
+          <!-- Active Tools -->
+          <div class="active-tools-card" id="active-tools-card">
+            <div class="section-header">
+              <span class="icon">&#x2699;&#xfe0f;</span> Active Tools
+            </div>
+            <div id="active-tools-content">
+              <div class="report-empty">No tools active. Trigger Sentinel to begin.</div>
+            </div>
+          </div>
 
           <!-- Incident Report -->
           <div class="report-panel" id="report-panel">
@@ -146,6 +239,10 @@
       <div class="bottom-controls">
         <button class="trigger-btn pulsing" id="trigger-btn">
           &#x26a1; TRIGGER SENTINEL
+        </button>
+        <div class="divider-v"></div>
+        <button class="call-test-btn" id="call-test-btn">
+          &#x1f4de; CALL TEST
         </button>
         <div class="divider-v"></div>
         <div class="control-group">

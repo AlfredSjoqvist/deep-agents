@@ -1,6 +1,13 @@
 /**
  * Sentinel Dashboard — Client-side application.
  * Vanilla TypeScript, no frameworks. Connects to FastAPI backend via REST + SSE.
+ *
+ * Features:
+ *   - Data pipeline visualization with sponsor tool badges
+ *   - Agent activity feed with tool-branded event lines
+ *   - Active tools panel with live spinner indicators
+ *   - Overmind decision trace line across pipeline
+ *   - Call test button for Bland AI phone demo
  */
 
 // ── Configuration ────────────────────────────────────────────────────────────
@@ -46,6 +53,58 @@ interface RunStatus {
   events: Record<string, unknown>[];
 }
 
+type NodeState = "pending" | "active" | "done" | "error";
+
+// ── Sponsor Tool Mapping ─────────────────────────────────────────────────────
+
+interface SponsorTool {
+  name: string;
+  color: string;
+}
+
+const SPONSOR_TOOLS: Record<string, SponsorTool> = {
+  "ghost-db":     { name: "Ghost DB",     color: "#7C3AED" },
+  "aerospike":    { name: "Aerospike",    color: "#7C3AED" },
+  "auth0":        { name: "Auth0",        color: "#EB5424" },
+  "bland-ai":     { name: "Bland AI",     color: "#2563EB" },
+  "claude":       { name: "Claude",       color: "#D4A574" },
+  "senso":        { name: "Senso",        color: "#10B981" },
+  "overmind":     { name: "Overmind",     color: "#6366F1" },
+  "truefoundry":  { name: "Truefoundry",  color: "#F59E0B" },
+};
+
+// Map event types to their primary sponsor tool(s)
+const EVENT_TO_TOOLS: Record<string, string[]> = {
+  "setup":    ["ghost-db"],
+  "ingest":   ["ghost-db"],
+  "matching": ["aerospike"],
+  "research": ["claude", "senso"],
+  "lockdown": ["auth0"],
+  "notify":   ["bland-ai"],
+  "complete": ["ghost-db"],
+};
+
+// Map event types to pipeline node IDs
+const EVENT_TO_NODE: Record<string, string> = {
+  "setup":    "breach-csv",
+  "ingest":   "ingest",
+  "matching": "match",
+  "research": "research",
+  "lockdown": "lockdown",
+  "notify":   "notify",
+  "complete": "complete",
+};
+
+// Pipeline node order for sequential activation
+const PIPELINE_NODES: string[] = [
+  "breach-csv", "ingest", "match", "research", "lockdown", "notify", "complete"
+];
+
+// Connector IDs between nodes (index corresponds to connector between node[i] and node[i+1])
+const CONNECTOR_IDS: string[] = [
+  "conn-0-1", "conn-1-2", "conn-2-3", "conn-3-4", "conn-4-5", "conn-5-6"
+];
+
 // ── State ────────────────────────────────────────────────────────────────────
 
 let currentRunId: string | null = null;
@@ -53,6 +112,15 @@ let eventSource: EventSource | null = null;
 let isRunning = false;
 let backendConnected = false;
 let uploadedCSV: File | null = null;
+
+// Track pipeline node states
+const nodeStates: Record<string, NodeState> = {};
+for (const node of PIPELINE_NODES) {
+  nodeStates[node] = "pending";
+}
+
+// Track currently active tools for the Active Tools panel
+const activeTools: Map<string, string> = new Map(); // tool-key -> last action
 
 // Metric targets for counter animation
 const metricTargets = {
@@ -81,14 +149,6 @@ const dom = {
   integrationsList: $("integrations-list"),
   globalStatus: $("global-status"),
   globalStatusText: $("global-status-text"),
-  phaseIngest: $("phase-ingest"),
-  phaseResearch: $("phase-research"),
-  phaseRespond: $("phase-respond"),
-  phaseIngestLabel: $("phase-ingest-label"),
-  phaseResearchLabel: $("phase-research-label"),
-  phaseRespondLabel: $("phase-respond-label"),
-  connector12: $("connector-1-2"),
-  connector23: $("connector-2-3"),
   metricRecords: $("metric-records"),
   metricMatches: $("metric-matches"),
   metricCritical: $("metric-critical"),
@@ -98,7 +158,10 @@ const dom = {
   eventLogEmpty: $("event-log-empty"),
   reportContent: $("report-content"),
   classificationContent: $("classification-content"),
+  activeToolsContent: $("active-tools-content"),
+  overmindTrace: $("overmind-trace"),
   triggerBtn: $("trigger-btn") as HTMLButtonElement,
+  callTestBtn: $("call-test-btn") as HTMLButtonElement,
   csvUpload: $("csv-upload") as HTMLInputElement,
   csvUploadBtn: $("csv-upload-btn"),
   useSample: $("use-sample") as HTMLInputElement,
@@ -207,7 +270,7 @@ dom.triggerBtn.addEventListener("click", () => {
 
 async function triggerSentinel(): Promise<void> {
   if (!backendConnected) {
-    addEventLine("error", "Backend is not connected. Cannot trigger.");
+    addEventLine("error", "Backend is not connected. Cannot trigger.", []);
     return;
   }
 
@@ -235,13 +298,47 @@ async function triggerSentinel(): Promise<void> {
     const data = (await resp.json()) as TriggerResponse;
     currentRunId = data.run_id;
 
-    addEventLine("setup", `Sentinel triggered. Run ID: ${currentRunId}`);
+    addEventLine("setup", `Sentinel triggered. Run ID: ${currentRunId}`, ["ghost-db"]);
     connectSSE(currentRunId);
   } catch (err) {
-    addEventLine("error", `Failed to trigger: ${err}`);
+    addEventLine("error", `Failed to trigger: ${err}`, []);
     setRunning(false);
   }
 }
+
+// ── Call Test ────────────────────────────────────────────────────────────────
+
+dom.callTestBtn.addEventListener("click", async () => {
+  if (dom.callTestBtn.disabled) return;
+  dom.callTestBtn.disabled = true;
+  dom.callTestBtn.innerHTML = "&#x23F3; Calling...";
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/call`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone_number: "+18782280111" }),
+    });
+
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`Call failed: ${resp.status} — ${errText}`);
+    }
+
+    const data = await resp.json();
+    addEventLine("notify", `Call test initiated: ${data.status || "sent"}`, ["bland-ai"]);
+    dom.callTestBtn.innerHTML = "&#x2705; Call Sent";
+
+    setTimeout(() => {
+      dom.callTestBtn.disabled = false;
+      dom.callTestBtn.innerHTML = "&#x1f4de; CALL TEST";
+    }, 3000);
+  } catch (err) {
+    addEventLine("error", `Call test failed: ${err}`, []);
+    dom.callTestBtn.disabled = false;
+    dom.callTestBtn.innerHTML = "&#x1f4de; CALL TEST";
+  }
+});
 
 // ── SSE Connection ───────────────────────────────────────────────────────────
 
@@ -276,125 +373,190 @@ function connectSSE(runId: string): void {
 }
 
 function handleSSEEvent(evt: SSEEvent): void {
-  // Add to event log
-  addEventLine(evt.type, evt.message);
-
-  // Update phases based on event type
   const evtType = evt.type;
+  const tools = EVENT_TO_TOOLS[evtType] || [];
+  const nodeId = EVENT_TO_NODE[evtType];
 
+  // Add to activity feed with tool badges
+  addEventLine(evtType, evt.message, tools);
+
+  // Update active tools
+  updateActiveTools(evtType, tools, evt.message);
+
+  // Activate the Overmind trace when pipeline starts
+  if (evtType === "setup" || evtType === "ingest") {
+    dom.overmindTrace.classList.add("visible");
+    // Overmind is always tracing
+    setActiveTool("overmind", "Tracing decisions");
+  }
+
+  // Map event types to pipeline node states
   if (evtType === "setup") {
-    setPhase("ingest", "active");
+    setPipelineNode("breach-csv", "active");
   } else if (evtType === "ingest") {
-    setPhase("ingest", "active");
+    setPipelineNode("breach-csv", "done");
+    setPipelineNode("ingest", "active");
     if (evt.data && typeof evt.data.count === "number") {
       animateMetric("records", evt.data.count as number);
     }
   } else if (evtType === "matching") {
-    setPhase("ingest", "active");
+    setPipelineNode("ingest", "done");
+    setPipelineNode("match", "active");
     if (evt.data) {
       if (typeof evt.data.total === "number") animateMetric("matches", evt.data.total as number);
       if (typeof evt.data.critical === "number") animateMetric("critical", evt.data.critical as number);
     }
   } else if (evtType === "research") {
-    setPhase("ingest", "done");
-    setPhase("research", "active");
+    setPipelineNode("match", "done");
+    setPipelineNode("research", "active");
+    // Show Truefoundry as active (Claude runs via Truefoundry)
+    setActiveTool("truefoundry", "LLM gateway for Claude");
     if (evt.data && evt.data.cve_id) {
       updateIncidentReport(evt.data);
     }
   } else if (evtType === "lockdown") {
-    setPhase("research", "done");
-    setPhase("respond", "active");
+    setPipelineNode("research", "done");
+    setPipelineNode("lockdown", "active");
     if (evt.data && typeof evt.data.locked === "number") {
       animateMetric("locked", evt.data.locked as number);
     }
   } else if (evtType === "notify") {
-    setPhase("respond", "active");
+    setPipelineNode("lockdown", "done");
+    setPipelineNode("notify", "active");
     if (evt.data && typeof evt.data.calls_initiated === "number") {
       animateMetric("called", evt.data.calls_initiated as number);
     }
   } else if (evtType === "complete") {
-    setPhase("respond", "done");
+    // Mark all remaining nodes as done
+    for (const node of PIPELINE_NODES) {
+      setPipelineNode(node, "done");
+    }
     setRunning(false);
     setGlobalStatus("complete");
+    clearActiveTools();
     // Fetch final status for the full report
     if (currentRunId) {
       fetchFinalStatus(currentRunId);
     }
   } else if (evtType === "error") {
+    // Mark current active node as error
+    if (nodeId) {
+      setPipelineNode(nodeId, "error");
+    }
     setGlobalStatus("error");
     setRunning(false);
+    clearActiveTools();
   }
 }
 
-// ── Fetch Final Status ───────────────────────────────────────────────────────
+// ── Pipeline Node Management ─────────────────────────────────────────────────
 
-async function fetchFinalStatus(runId: string): Promise<void> {
-  try {
-    const resp = await fetch(`${API_BASE}/api/status/${runId}`);
-    if (!resp.ok) return;
-    const data = (await resp.json()) as RunStatus;
+function setPipelineNode(nodeId: string, state: NodeState): void {
+  // Don't downgrade state (e.g., done -> active)
+  const currentState = nodeStates[nodeId];
+  if (currentState === "done" && state === "active") return;
+  if (currentState === "done" && state === "pending") return;
 
-    // Update all metrics from final data
-    animateMetric("records", data.total_breach_records);
-    animateMetric("matches", data.total_matches);
-    animateMetric("critical", data.critical_count);
-    animateMetric("locked", data.accounts_locked);
-    animateMetric("called", data.calls_initiated);
+  nodeStates[nodeId] = state;
 
-    // Update phases
-    if (data.status === "complete" || data.status === "complete_no_matches") {
-      setPhase("ingest", "done");
-      setPhase("research", "done");
-      setPhase("respond", "done");
-      setGlobalStatus("complete");
-    } else if (data.status === "error") {
-      setGlobalStatus("error");
-    }
+  const circle = document.getElementById(`node-${nodeId}`);
+  const label = document.getElementById(`label-${nodeId}`);
+  if (!circle || !label) return;
 
-    // Update incident report
-    if (data.incident_report && Object.keys(data.incident_report).length > 0) {
-      renderFullIncidentReport(data.incident_report);
-    }
+  // Update circle class
+  circle.className = `pipeline-circle ${state}`;
 
-    setRunning(false);
-  } catch (e) {
-    console.error("Failed to fetch final status:", e);
-    setRunning(false);
+  // Update label class
+  label.className = `pipeline-node-label ${state}`;
+
+  // Add/remove state overlay
+  const existingOverlay = circle.querySelector(".state-overlay");
+  if (existingOverlay) {
+    existingOverlay.remove();
   }
-}
 
-// ── Phase Management ─────────────────────────────────────────────────────────
-
-type PhaseState = "pending" | "active" | "done" | "error";
-
-function setPhase(phase: "ingest" | "research" | "respond", state: PhaseState): void {
-  const circleId = `phase-${phase}`;
-  const labelId = `phase-${phase}-label`;
-  const circle = $(circleId);
-  const label = $(labelId);
-
-  circle.className = `phase-circle ${state}`;
-  label.className = `phase-label ${state}`;
-
-  // Update circle content
   if (state === "done") {
-    circle.innerHTML = "&#x2713;";
-  } else if (state === "active") {
-    const num = phase === "ingest" ? "1" : phase === "research" ? "2" : "3";
-    circle.textContent = num;
+    const overlay = document.createElement("span");
+    overlay.className = "state-overlay done-overlay";
+    overlay.textContent = "\u2713";
+    circle.appendChild(overlay);
   } else if (state === "error") {
-    circle.innerHTML = "&#x2717;";
+    const overlay = document.createElement("span");
+    overlay.className = "state-overlay error-overlay";
+    overlay.textContent = "\u2717";
+    circle.appendChild(overlay);
   }
 
   // Update connectors
-  if (phase === "research" && (state === "active" || state === "done")) {
-    dom.connector12.className = state === "done" ? "phase-connector done" : "phase-connector active";
-  }
-  if (phase === "respond" && (state === "active" || state === "done")) {
-    dom.connector12.className = "phase-connector done";
-    dom.connector23.className = state === "done" ? "phase-connector done" : "phase-connector active";
+  updateConnectors();
+}
+
+function updateConnectors(): void {
+  for (let i = 0; i < CONNECTOR_IDS.length; i++) {
+    const connEl = document.getElementById(CONNECTOR_IDS[i]);
+    if (!connEl) continue;
+
+    const leftNode = PIPELINE_NODES[i];
+    const rightNode = PIPELINE_NODES[i + 1];
+    const leftState = nodeStates[leftNode];
+    const rightState = nodeStates[rightNode];
+
+    if (leftState === "done" && (rightState === "done" || rightState === "error")) {
+      connEl.className = "pipeline-connector done";
+    } else if (leftState === "done" && rightState === "active") {
+      connEl.className = "pipeline-connector active";
+    } else if (leftState === "active") {
+      connEl.className = "pipeline-connector active";
+    } else {
+      connEl.className = "pipeline-connector pending";
+    }
   }
 }
+
+// ── Active Tools Panel ───────────────────────────────────────────────────────
+
+function updateActiveTools(evtType: string, tools: string[], message: string): void {
+  // Trim the message for display
+  const shortMsg = message.length > 50 ? message.substring(0, 47) + "..." : message;
+
+  for (const toolKey of tools) {
+    setActiveTool(toolKey, shortMsg);
+  }
+}
+
+function setActiveTool(toolKey: string, action: string): void {
+  activeTools.set(toolKey, action);
+  renderActiveTools();
+}
+
+function clearActiveTools(): void {
+  activeTools.clear();
+  renderActiveTools();
+}
+
+function renderActiveTools(): void {
+  if (activeTools.size === 0) {
+    dom.activeToolsContent.innerHTML = `<div class="report-empty">No tools active. Trigger Sentinel to begin.</div>`;
+    return;
+  }
+
+  let html = "";
+  for (const [toolKey, action] of activeTools) {
+    const tool = SPONSOR_TOOLS[toolKey];
+    if (!tool) continue;
+    html += `
+      <div class="active-tool-item">
+        <div class="tool-spinner" style="color: ${tool.color}; border-top-color: ${tool.color};"></div>
+        <span class="active-tool-name" style="color: ${tool.color};">${escapeHtml(tool.name)}</span>
+        <span class="active-tool-action">${escapeHtml(action)}</span>
+      </div>
+    `;
+  }
+
+  dom.activeToolsContent.innerHTML = html;
+}
+
+// ── Global Status ────────────────────────────────────────────────────────────
 
 function setGlobalStatus(status: "idle" | "running" | "complete" | "error"): void {
   dom.globalStatus.className = `status-indicator ${status}`;
@@ -423,9 +585,46 @@ function setRunning(running: boolean): void {
   }
 }
 
-// ── Event Log ────────────────────────────────────────────────────────────────
+// ── Fetch Final Status ───────────────────────────────────────────────────────
 
-function addEventLine(type: string, message: string): void {
+async function fetchFinalStatus(runId: string): Promise<void> {
+  try {
+    const resp = await fetch(`${API_BASE}/api/status/${runId}`);
+    if (!resp.ok) return;
+    const data = (await resp.json()) as RunStatus;
+
+    // Update all metrics from final data
+    animateMetric("records", data.total_breach_records);
+    animateMetric("matches", data.total_matches);
+    animateMetric("critical", data.critical_count);
+    animateMetric("locked", data.accounts_locked);
+    animateMetric("called", data.calls_initiated);
+
+    // Update pipeline nodes
+    if (data.status === "complete" || data.status === "complete_no_matches") {
+      for (const node of PIPELINE_NODES) {
+        setPipelineNode(node, "done");
+      }
+      setGlobalStatus("complete");
+    } else if (data.status === "error") {
+      setGlobalStatus("error");
+    }
+
+    // Update incident report
+    if (data.incident_report && Object.keys(data.incident_report).length > 0) {
+      renderFullIncidentReport(data.incident_report);
+    }
+
+    setRunning(false);
+  } catch (e) {
+    console.error("Failed to fetch final status:", e);
+    setRunning(false);
+  }
+}
+
+// ── Event Log / Activity Feed ────────────────────────────────────────────────
+
+function addEventLine(type: string, message: string, tools: string[]): void {
   // Remove empty placeholder
   if (dom.eventLogEmpty) {
     dom.eventLogEmpty.style.display = "none";
@@ -436,9 +635,24 @@ function addEventLine(type: string, message: string): void {
 
   const line = document.createElement("div");
   line.className = "event-line";
+
+  // Build tool badge(s)
+  let toolBadgesHtml = "";
+  if (tools.length > 0) {
+    for (const toolKey of tools) {
+      const tool = SPONSOR_TOOLS[toolKey];
+      if (tool) {
+        toolBadgesHtml += `<span class="event-tool-badge" style="background: ${hexToRgba(tool.color, 0.15)}; border: 1px solid ${hexToRgba(tool.color, 0.35)}; color: ${tool.color};">${escapeHtml(tool.name)}</span>`;
+      }
+    }
+  } else {
+    // Fallback: generic event tag
+    toolBadgesHtml = `<span class="event-tag ${escapeHtml(type)}">${escapeHtml(type)}</span>`;
+  }
+
   line.innerHTML = `
     <span class="event-timestamp">${ts}</span>
-    <span class="event-tag ${escapeHtml(type)}">${escapeHtml(type)}</span>
+    ${toolBadgesHtml}
     <span class="event-message">${escapeHtml(message)}</span>
   `;
 
@@ -455,18 +669,15 @@ function animateMetric(metric: keyof typeof metricTargets, target: number): void
 }
 
 function tickMetrics(): void {
-  let needsAnotherFrame = false;
-
   for (const key of Object.keys(metricTargets) as (keyof typeof metricTargets)[]) {
     const target = metricTargets[key];
     const current = metricCurrent[key];
 
     if (current !== target) {
-      // Animate: move ~10% of the remaining distance each frame, minimum 1
+      // Animate: move ~12% of the remaining distance each frame, minimum 1
       const diff = target - current;
       const step = Math.max(1, Math.ceil(Math.abs(diff) * 0.12));
       metricCurrent[key] = diff > 0 ? Math.min(target, current + step) : Math.max(target, current - step);
-      needsAnotherFrame = true;
 
       // Update DOM
       const el = {
@@ -628,17 +839,30 @@ function updateClassification(incidentType: string, attackVector?: string): void
 // ── Reset ────────────────────────────────────────────────────────────────────
 
 function resetDashboard(): void {
-  // Reset phases
-  for (const phase of ["ingest", "research", "respond"] as const) {
-    const circle = $(`phase-${phase}`);
-    const label = $(`phase-${phase}-label`);
-    circle.className = "phase-circle pending";
-    label.className = "phase-label";
-    const num = phase === "ingest" ? "1" : phase === "research" ? "2" : "3";
-    circle.textContent = num;
+  // Reset pipeline nodes
+  for (const nodeId of PIPELINE_NODES) {
+    nodeStates[nodeId] = "pending";
+    const circle = document.getElementById(`node-${nodeId}`);
+    const label = document.getElementById(`label-${nodeId}`);
+    if (circle) {
+      circle.className = "pipeline-circle pending";
+      // Remove any state overlays
+      const overlay = circle.querySelector(".state-overlay");
+      if (overlay) overlay.remove();
+    }
+    if (label) {
+      label.className = "pipeline-node-label";
+    }
   }
-  dom.connector12.className = "phase-connector pending";
-  dom.connector23.className = "phase-connector pending";
+
+  // Reset connectors
+  for (const connId of CONNECTOR_IDS) {
+    const conn = document.getElementById(connId);
+    if (conn) conn.className = "pipeline-connector pending";
+  }
+
+  // Hide overmind trace
+  dom.overmindTrace.classList.remove("visible");
 
   // Reset metrics
   for (const key of Object.keys(metricTargets) as (keyof typeof metricTargets)[]) {
@@ -661,6 +885,9 @@ function resetDashboard(): void {
   dom.reportContent.innerHTML = `<div class="report-empty">Awaiting incident data...</div>`;
   dom.classificationContent.innerHTML = `<div class="report-empty">Classification will appear after research phase.</div>`;
 
+  // Reset active tools
+  clearActiveTools();
+
   // Reset global status
   setGlobalStatus("idle");
 
@@ -679,6 +906,13 @@ function escapeHtml(str: string): string {
   const div = document.createElement("div");
   div.textContent = str;
   return div.innerHTML;
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
