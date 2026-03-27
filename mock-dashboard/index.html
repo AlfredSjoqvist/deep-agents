@@ -4,1112 +4,861 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SENTINEL — Autonomous Breach Response</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  :root {
-    --bg-deep: #060a13;
-    --bg-panel: #0b1022;
-    --bg-card: #0f1629;
-    --bg-card-hover: #131d35;
-    --border: #1a2440;
-    --text-primary: #f1f5f9;
-    --text-secondary: #94a3b8;
-    --text-muted: #475569;
-    --red: #ef4444;
-    --red-glow: rgba(239,68,68,0.25);
-    --orange: #f97316;
-    --yellow: #eab308;
-    --yellow-glow: rgba(234,179,8,0.25);
-    --green: #22c55e;
-    --green-glow: rgba(34,197,94,0.25);
-    --blue: #3b82f6;
-    --blue-glow: rgba(59,130,246,0.25);
-    --purple: #8b5cf6;
-    --cyan: #06b6d4;
-  }
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#000000;--panel:#080808;--card:#111111;--card2:#1a1a1a;--border:#1e1e1e;
+  --t1:#e4e4e7;--t2:#a1a1aa;--t3:#52525b;
+  --red:#ef4444;--orange:#f97316;--yellow:#eab308;--green:#22c55e;--blue:#e4e4e7;--purple:#a78bfa;--cyan:#67e8f9;
+}
+body{background:var(--bg);color:var(--t1);font-family:'Inter',system-ui,sans-serif;overflow:hidden;height:100vh;}
+.mono{font-family:'JetBrains Mono',monospace;}
 
-  body {
-    background: var(--bg-deep);
-    color: var(--text-primary);
-    font-family: 'Inter', system-ui, sans-serif;
-    overflow: hidden; height: 100vh;
-  }
+/* BG */
+.bg-grid{display:none;}
+.bg-glow{display:none;}
 
-  /* Background */
-  .bg-grid {
-    position: fixed; inset: 0; z-index: 0; pointer-events: none;
-    background-image:
-      linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
-    background-size: 60px 60px;
-  }
-  .bg-glow {
-    position: fixed; z-index: 0; pointer-events: none;
-    width: 600px; height: 600px; border-radius: 50%;
-    filter: blur(120px); transition: all 2s ease;
-  }
-  .bg-glow-1 { top: -200px; right: -100px; background: var(--blue); opacity: 0.12; }
-  .bg-glow-2 { bottom: -200px; left: -100px; background: var(--purple); opacity: 0.1; }
+/* Banner */
+.banner{position:relative;z-index:10;padding:10px 28px;display:flex;align-items:center;justify-content:space-between;
+  background:#080808;border-bottom:1px solid var(--border);}
+.brand{display:flex;align-items:center;gap:12px;}
+.brand .shield{width:36px;height:36px;border-radius:9px;background:#1a1a1a;border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:18px;}
+.brand h1{font-size:18px;font-weight:800;}
+.brand .accent{color:var(--t1);}
+.brand .sub{font-size:10px;color:var(--t3);font-weight:600;letter-spacing:1.5px;text-transform:uppercase;}
+.badge{padding:6px 16px;border-radius:20px;font-weight:700;font-size:12px;display:flex;align-items:center;gap:8px;
+  letter-spacing:.5px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;transition:all .5s;}
+.badge .dot{width:8px;height:8px;border-radius:50%;box-shadow:0 0 8px currentColor;animation:pulse 1.8s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.8);}}
+.b-idle{background:rgba(71,85,105,.12);color:#64748b;border:1px solid rgba(71,85,105,.25);}
+.b-idle .dot{background:#64748b;}
+.b-scan{background:rgba(161,161,170,.1);color:#d4d4d8;border:1px solid rgba(161,161,170,.2);}
+.b-scan .dot{background:#d4d4d8;}
+.b-red{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25);box-shadow:0 0 20px rgba(239,68,68,.1);}
+.b-red .dot{background:var(--red);}
+.b-orange{background:rgba(249,115,22,.12);color:#fb923c;border:1px solid rgba(249,115,22,.25);}
+.b-orange .dot{background:var(--orange);}
+.b-green{background:rgba(34,197,94,.12);color:#4ade80;border:1px solid rgba(34,197,94,.25);box-shadow:0 0 20px rgba(34,197,94,.1);}
+.b-green .dot{background:var(--green);animation:none;}
+.timer{font-size:28px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--t1);}
+.timer-label{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;font-weight:600;text-align:right;}
 
-  /* Banner */
-  .banner {
-    position: relative; z-index: 10;
-    padding: 14px 32px;
-    display: flex; align-items: center; justify-content: space-between;
-    background: rgba(11,16,34,0.85); backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--border);
-  }
-  .brand { display: flex; align-items: center; gap: 14px; }
-  .brand .shield {
-    width: 40px; height: 40px; border-radius: 10px;
-    background: linear-gradient(135deg, var(--blue), var(--purple));
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px; box-shadow: 0 0 20px var(--blue-glow);
-  }
-  .brand h1 { font-size: 20px; font-weight: 800; }
-  .brand .accent { background: linear-gradient(90deg, var(--blue), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .brand .subtitle { font-size: 11px; color: var(--text-muted); font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; }
+/* Pipeline */
+.pipeline{position:relative;z-index:10;display:flex;align-items:stretch;padding:0 28px;height:64px;
+  background:#080808;border-bottom:1px solid var(--border);gap:0;}
+.pipe-step{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;
+  font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t3);
+  border-bottom:3px solid transparent;transition:all .4s;position:relative;}
+.pipe-step .num{width:22px;height:22px;border-radius:50%;font-size:10px;display:flex;align-items:center;justify-content:center;
+  background:var(--card);border:1.5px solid var(--border);font-weight:700;transition:all .4s;}
+.pipe-step.active{color:var(--t1);border-bottom-color:var(--t1);}
+.pipe-step.active .num{background:var(--t1);color:#000;border-color:var(--t1);}
+.pipe-step.done{color:var(--green);}
+.pipe-step.done .num{background:var(--green);color:#fff;border-color:var(--green);}
+.pipe-arrow{display:flex;align-items:center;color:var(--border);font-size:14px;padding:0 2px;transition:color .4s;}
+.pipe-arrow.done{color:var(--green);}
+.pipeline.tabbed{gap:4px;padding:6px 28px;}
+.pipeline.tabbed .pipe-arrow{display:none;}
+.pipeline.tabbed .pipe-step{cursor:pointer;border:1px solid var(--border);border-bottom:2px solid transparent;
+  border-radius:6px;padding:0 14px;height:42px;transition:all .2s;}
+.pipeline.tabbed .pipe-step .num{display:none;}
+.pipeline.tabbed .pipe-step:hover{background:rgba(255,255,255,.04);border-color:var(--t3);}
+.pipeline.tabbed .pipe-step.tab-active{background:rgba(255,255,255,.06);border-color:var(--t2);color:var(--t1);border-bottom-color:var(--t1);}
+.pipeline.tabbed .pipe-step.done{color:var(--t3);}
 
-  .status-badge {
-    padding: 8px 20px; border-radius: 24px; font-weight: 700; font-size: 13px;
-    display: flex; align-items: center; gap: 10px;
-    letter-spacing: 1px; text-transform: uppercase;
-    font-family: 'JetBrains Mono', monospace; transition: all 0.6s;
-  }
-  .status-badge .dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    box-shadow: 0 0 8px currentColor;
-    animation: pulse 1.8s ease-in-out infinite;
-  }
-  @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.4; transform:scale(0.8); } }
-  .status-idle { background: rgba(71,85,105,0.15); color: #64748b; border: 1px solid rgba(71,85,105,0.3); }
-  .status-idle .dot { background: #64748b; }
-  .status-red { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.25); box-shadow: 0 0 30px rgba(239,68,68,0.1); }
-  .status-red .dot { background: var(--red); }
-  .status-yellow { background: rgba(234,179,8,0.12); color: #facc15; border: 1px solid rgba(234,179,8,0.25); }
-  .status-yellow .dot { background: var(--yellow); }
-  .status-orange { background: rgba(249,115,22,0.12); color: #fb923c; border: 1px solid rgba(249,115,22,0.25); box-shadow: 0 0 30px rgba(249,115,22,0.1); }
-  .status-orange .dot { background: var(--orange); }
-  .status-green { background: rgba(34,197,94,0.12); color: #4ade80; border: 1px solid rgba(34,197,94,0.25); box-shadow: 0 0 30px rgba(34,197,94,0.1); }
-  .status-green .dot { background: var(--green); animation: none; }
+/* Main content — fixed two-column layout */
+.main{position:relative;z-index:10;height:calc(100vh - 130px);display:grid;grid-template-columns:1fr 400px;overflow:hidden;}
+.left-panel{padding:20px 24px;overflow-y:auto;scrollbar-width:none;border-right:1px solid var(--border);display:flex;flex-direction:column;}
+.left-panel::-webkit-scrollbar{display:none;}
+.right-panel{padding:20px 24px;display:flex;flex-direction:column;overflow:hidden;}
+.right-panel .log-feed{flex:1;overflow-y:auto;display:flex;flex-direction:column;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+.right-panel .log-feed::-webkit-scrollbar{width:5px;}
+.right-panel .log-feed::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
 
-  .timer-block { text-align: right; }
-  .timer-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; }
-  .timer-value {
-    font-size: 32px; font-weight: 800; font-family: 'JetBrains Mono', monospace;
-    background: linear-gradient(90deg, var(--text-primary), var(--text-secondary));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  }
+.slabel{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--t3);font-weight:700;margin-bottom:12px;}
 
-  /* Phase bar */
-  .phase-bar {
-    position: relative; z-index: 10;
-    display: flex; align-items: center;
-    padding: 0 32px; height: 44px;
-    background: rgba(11,16,34,0.6); backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--border);
-  }
-  .phase-step {
-    display: flex; align-items: center; gap: 8px;
-    padding: 0 16px; height: 100%;
-    font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
-    color: var(--text-muted); border-bottom: 2px solid transparent; transition: all 0.4s;
-  }
-  .phase-step .num {
-    width: 20px; height: 20px; border-radius: 50%; font-size: 10px;
-    display: flex; align-items: center; justify-content: center;
-    background: var(--bg-card); border: 1px solid var(--border);
-    font-weight: 700; transition: all 0.4s;
-  }
-  .phase-step.active { color: var(--blue); border-bottom-color: var(--blue); }
-  .phase-step.active .num { background: var(--blue); color: white; border-color: var(--blue); box-shadow: 0 0 12px var(--blue-glow); }
-  .phase-step.done { color: var(--green); }
-  .phase-step.done .num { background: var(--green); color: white; border-color: var(--green); }
-  .phase-connector { width: 24px; height: 2px; background: var(--border); transition: background 0.4s; }
-  .phase-connector.done { background: var(--green); }
+/* Monitor screen */
+#monitorScreen{display:flex;flex-direction:column;flex:1;}
+.monitor-feed{flex:1;overflow:hidden;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.9;color:var(--t3);}
+.monitor-feed .mf-ok{color:var(--green);opacity:.5;}
+.monitor-feed .mf-info{color:var(--t3);}
+.monitor-feed .mf-time{color:#1e293b;margin-right:6px;}
+.monitor-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:auto;}
+.mstat{background:var(--card);border-radius:8px;padding:12px;border:1px solid var(--border);text-align:center;}
+.mstat .msv{font-size:24px;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--green);}
+.mstat .msl{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
+.source-list{flex:1;overflow:hidden;}
+.source-item{padding:6px 10px;margin-bottom:4px;border-radius:6px;background:var(--card);border-left:2px solid var(--green);
+  font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--t3);display:flex;justify-content:space-between;opacity:.6;}
+.source-item .src-status{color:var(--green);font-weight:600;}
 
-  /* Time comparison */
-  .time-compare {
-    position: relative; z-index: 10;
-    display: none; align-items: center; gap: 24px;
-    padding: 10px 32px;
-    background: rgba(11,16,34,0.5); border-bottom: 1px solid var(--border);
-    font-size: 12px;
-  }
-  .time-compare.visible { display: flex; }
-  .tc-row { display: flex; align-items: center; gap: 10px; flex: 1; }
-  .tc-label { font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; min-width: 100px; }
-  .tc-bar-bg { flex: 1; height: 8px; background: var(--bg-card); border-radius: 4px; overflow: hidden; }
-  .tc-bar-fill { height: 100%; border-radius: 4px; transition: width 2s cubic-bezier(0.16,1,0.3,1); }
-  .tc-time { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 12px; min-width: 80px; text-align: right; }
+/* Scan animation */
+.scan-vis{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;grid-column:1/-1;}
+.scan-domains{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--t3);line-height:2;text-align:center;max-height:300px;overflow:hidden;}
+.scan-domains .hit{color:var(--red);font-weight:700;text-shadow:0 0 10px rgba(239,68,68,.3);}
+.scan-domains .checked{color:var(--green);opacity:.4;}
+.scan-counter{font-size:14px;color:var(--t2);margin-top:16px;font-family:'JetBrains Mono',monospace;}
+.scan-counter b{color:var(--t1);font-size:20px;}
 
-  /* Main grid */
-  .main {
-    position: relative; z-index: 10;
-    display: grid;
-    grid-template-columns: 300px 1fr 400px;
-    height: calc(100vh - 112px);
-  }
-  .main.with-compare { height: calc(100vh - 150px); }
+/* Breach found flash */
+.breach-flash{display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;grid-column:1/-1;animation:flashIn .3s ease;}
+@keyframes flashIn{from{opacity:0;}to{opacity:1;}}
+.breach-flash h2{font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;}
+.breach-flash .detail{color:var(--t2);font-size:13px;max-width:400px;text-align:center;line-height:1.6;font-family:'JetBrains Mono',monospace;}
 
-  /* Left panel */
-  .panel-left {
-    background: rgba(11,16,34,0.5); backdrop-filter: blur(10px);
-    border-right: 1px solid var(--border);
-    padding: 20px 16px; display: flex; flex-direction: column; gap: 12px;
-    overflow-y: auto; scrollbar-width: none;
-  }
-  .panel-left::-webkit-scrollbar { display: none; }
-  .section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted); font-weight: 700; }
+/* Match visualization */
+.match-grid{display:grid;grid-template-columns:repeat(25,1fr);gap:2px;margin-bottom:16px;}
+.dot{width:100%;aspect-ratio:1;border-radius:2px;background:#1e293b;transition:all .3s;}
+.dot.crit{background:var(--red);box-shadow:0 0 4px rgba(239,68,68,.3);}
+.dot.warn{background:var(--yellow);box-shadow:0 0 4px rgba(234,179,8,.3);}
+.dot.safe{background:var(--green);opacity:.4;}
+.match-stats{display:flex;gap:16px;margin-top:12px;}
+.match-stat{flex:1;background:var(--card);border-radius:10px;padding:14px;border:1px solid var(--border);text-align:center;position:relative;overflow:hidden;}
+.match-stat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.match-stat.ms-c::before{background:var(--red);}
+.match-stat.ms-w::before{background:var(--yellow);}
+.match-stat.ms-s::before{background:var(--green);}
+.match-stat .mv{font-size:32px;font-weight:900;font-family:'JetBrains Mono',monospace;}
+.ms-c .mv{color:var(--red);}
+.ms-w .mv{color:var(--yellow);}
+.ms-s .mv{color:var(--green);}
+.match-stat .ml{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-top:4px;}
 
-  /* Particle grid */
-  .particle-container {
-    background: var(--bg-card); border-radius: 12px; padding: 16px;
-    border: 1px solid var(--border);
-  }
-  .particle-grid {
-    display: grid; grid-template-columns: repeat(25, 1fr); gap: 3px;
-    margin-top: 10px;
-  }
-  .particle {
-    width: 100%; aspect-ratio: 1; border-radius: 2px;
-    background: #1e293b; transition: all 0.3s ease;
-  }
-  .particle.critical { background: var(--red); box-shadow: 0 0 4px var(--red-glow); }
-  .particle.warning { background: var(--yellow); box-shadow: 0 0 4px var(--yellow-glow); }
-  .particle.safe { background: var(--green); opacity: 0.5; }
-  .particle-legend {
-    display: flex; gap: 16px; margin-top: 10px; font-size: 11px; color: var(--text-muted);
-  }
-  .particle-legend span { display: flex; align-items: center; gap: 5px; }
-  .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+/* User cards (horizontal) */
+.user-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.ucard{background:var(--card);border-radius:10px;padding:12px;border:1px solid var(--border);transition:all .4s;position:relative;overflow:hidden;font-size:12px;}
+.ucard.uc-noanswer{opacity:.7;}
+.ucard.uc-noanswer::before{background:var(--yellow)!important;}
+.ucard.uc-unlocked::before{background:var(--green)!important;box-shadow:0 0 15px rgba(34,197,94,.3)!important;}
+.ucard.uc-locked::before{background:var(--red)!important;}
+.ucard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--border);transition:all .5s;}
+.ucard.uc-active::before{background:var(--t2);}
+.ucard.uc-done::before{background:var(--green);box-shadow:0 0 15px rgba(34,197,94,.3);}
+.ucard .uname{font-size:15px;font-weight:700;}
+.ucard .uemail{font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:2px;}
+.ucard .ubadge{display:inline-block;font-size:9px;padding:3px 8px;border-radius:5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-top:6px;
+  background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.2);}
+.ucard .usteps{margin-top:12px;display:flex;flex-direction:column;gap:6px;}
+.ustep{font-size:12px;display:flex;align-items:center;gap:8px;color:var(--t3);font-weight:500;transition:color .3s;}
+.ustep.s-done{color:var(--green);}
+.ustep.s-active{color:var(--yellow);}
+.ustep .si{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;transition:all .3s;}
+.si.si-pending{background:rgba(71,85,105,.15);color:var(--t3);}
+.si.si-active{background:rgba(161,161,170,.15);color:var(--t2);animation:pulse 1s infinite;}
+.si.si-done{background:rgba(34,197,94,.15);color:var(--green);}
 
-  /* Stat cards */
-  .stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-  .stat-card {
-    background: var(--bg-card); border-radius: 10px; padding: 12px;
-    border: 1px solid var(--border); position: relative; overflow: hidden;
-  }
-  .stat-card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: var(--border); transition: all 0.6s;
-  }
-  .stat-card .label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
-  .stat-card .value {
-    font-size: 32px; font-weight: 900; font-family: 'JetBrains Mono', monospace;
-    line-height: 1; margin-top: 4px;
-  }
-  .stat-card.critical::before { background: var(--red); }
-  .stat-card.critical .value { color: var(--red); text-shadow: 0 0 20px var(--red-glow); }
-  .stat-card.warning::before { background: var(--yellow); }
-  .stat-card.warning .value { color: var(--yellow); }
-  .stat-card.safe::before { background: var(--green); }
-  .stat-card.safe .value { color: var(--green); }
+/* Waveform */
+.wave{display:none;margin-top:10px;padding:8px 12px;background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.15);
+  border-radius:8px;align-items:center;gap:8px;}
+.wave.active{display:flex;}
+.wave-label{font-size:10px;color:var(--purple);font-weight:700;white-space:nowrap;}
+.wave-bars{display:flex;align-items:center;gap:2px;flex:1;height:20px;}
+.wbar{width:3px;background:var(--purple);border-radius:2px;animation:wv .8s ease-in-out infinite alternate;}
+@keyframes wv{0%{height:3px;opacity:.3;}100%{height:18px;opacity:1;}}
 
-  /* Breach source card */
-  .breach-source {
-    background: var(--bg-card); border-radius: 10px; padding: 14px;
-    border: 1px solid var(--border); display: none;
-  }
-  .breach-source.visible { display: block; }
-  .bs-row { display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; }
-  .bs-key { color: var(--text-muted); }
-  .bs-val { color: var(--text-primary); font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+/* Decision cards */
+.decision-card{background:rgba(139,92,246,.05);border:1px solid rgba(139,92,246,.15);border-radius:10px;padding:14px;margin-bottom:10px;animation:fadeUp .4s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.decision-card .dname{font-weight:700;font-size:14px;margin-bottom:6px;}
+.decision-card .daction{font-weight:800;font-size:13px;margin-bottom:4px;}
+.decision-card .dreason{font-size:12px;color:var(--t2);line-height:1.5;}
 
-  /* Progress ring */
-  .progress-section {
-    background: var(--bg-card); border-radius: 12px; padding: 16px;
-    border: 1px solid var(--border); display: none; flex-direction: column; align-items: center;
-  }
-  .progress-section.visible { display: flex; }
-  .progress-ring { position: relative; width: 110px; height: 110px; margin: 4px 0; }
-  .progress-ring svg { transform: rotate(-90deg); filter: drop-shadow(0 0 6px var(--blue-glow)); }
-  .progress-ring circle { fill: none; }
-  .progress-ring .bg { stroke: var(--border); stroke-width: 6; }
-  .progress-ring .fg { stroke: var(--blue); stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 0.8s cubic-bezier(0.16,1,0.3,1); }
-  .ring-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; }
-  .ring-num { font-size: 28px; font-weight: 900; font-family: 'JetBrains Mono', monospace; }
-  .ring-total { font-size: 14px; color: var(--text-muted); }
-  .ring-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+/* Log feed (compact) */
+.log-feed{display:flex;flex-direction:column;gap:4px;}
+.lf-entry{padding:8px 12px;border-radius:8px;background:var(--card);border-left:3px solid var(--border);
+  font-size:12px;line-height:1.5;animation:fadeUp .3s ease;}
+.lf-entry .lf-time{font-family:'JetBrains Mono',monospace;color:var(--t3);font-size:10px;margin-right:6px;}
+.lf-entry.lf-action{border-left-color:var(--t3);}
+.lf-entry.lf-crit{border-left-color:var(--red);background:rgba(239,68,68,.03);}
+.lf-entry.lf-success{border-left-color:var(--green);}
+.lf-entry.lf-decision{border-left-color:var(--purple);background:rgba(139,92,246,.04);}
+.lf-entry b{color:var(--t1);font-weight:600;}
 
-  /* Center panel */
-  .panel-center {
-    padding: 20px 24px; overflow-y: auto;
-    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
-  }
-  .panel-center::-webkit-scrollbar { width: 6px; }
-  .panel-center::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+/* API ticker */
+.api-tick{font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 10px;margin-bottom:2px;border-radius:4px;
+  background:rgba(6,10,19,.6);border:1px solid #1a2440;display:flex;gap:6px;color:var(--t3);animation:fadeUp .2s ease;}
+.api-tick .am{color:var(--cyan);font-weight:700;}
+.api-tick .aok{color:var(--green);font-weight:700;}
 
-  .log-entry {
-    padding: 12px 16px; margin-bottom: 6px; border-radius: 10px;
-    background: var(--bg-card); border-left: 3px solid var(--border);
-    animation: logIn 0.35s cubic-bezier(0.16,1,0.3,1);
-    font-size: 13px; line-height: 1.6; transition: background 0.3s;
-  }
-  .log-entry:hover { background: var(--bg-card-hover); }
-  @keyframes logIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-  .log-entry .log-header { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
-  .log-entry .time { font-family: 'JetBrains Mono', monospace; color: var(--text-muted); font-size: 11px; }
-  .log-entry .phase-tag {
-    font-size: 9px; padding: 2px 7px; border-radius: 4px;
-    font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
-  }
-  .log-entry .msg { color: var(--text-secondary); }
-  .log-entry .msg b { color: var(--text-primary); font-weight: 600; }
-  .log-entry.action { border-left-color: var(--blue); }
-  .log-entry.action .phase-tag { background: rgba(59,130,246,0.15); color: #60a5fa; }
-  .log-entry.decision { border-left-color: var(--purple); background: rgba(139,92,246,0.05); border: 1px solid rgba(139,92,246,0.15); border-left: 3px solid var(--purple); }
-  .log-entry.decision .phase-tag { background: rgba(139,92,246,0.15); color: #a78bfa; }
-  .log-entry.critical-log { border-left-color: var(--red); background: rgba(239,68,68,0.04); }
-  .log-entry.critical-log .phase-tag { background: rgba(239,68,68,0.15); color: #f87171; }
-  .log-entry.success { border-left-color: var(--green); }
-  .log-entry.success .phase-tag { background: rgba(34,197,94,0.15); color: #4ade80; }
+/* Time compare bar */
+.time-bar{display:none;padding:12px 28px;background:#080808;border-top:1px solid var(--border);
+  align-items:center;gap:20px;}
+.time-bar.visible{display:flex;}
+.tb-row{display:flex;align-items:center;gap:10px;flex:1;}
+.tb-label{font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.5px;min-width:90px;}
+.tb-barbg{flex:1;height:8px;background:var(--card);border-radius:4px;overflow:hidden;}
+.tb-fill{height:100%;border-radius:4px;transition:width 2s cubic-bezier(.16,1,.3,1);}
+.tb-time{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12px;min-width:70px;text-align:right;}
 
-  /* API call ticker */
-  .api-ticker {
-    font-family: 'JetBrains Mono', monospace; font-size: 11px;
-    padding: 8px 14px; margin-bottom: 4px; border-radius: 6px;
-    background: rgba(6,10,19,0.8); border: 1px solid #1a2440;
-    animation: logIn 0.3s ease; display: flex; align-items: center; gap: 8px;
-    color: var(--text-muted);
-  }
-  .api-ticker .method { color: var(--cyan); font-weight: 700; }
-  .api-ticker .url { color: var(--text-secondary); }
-  .api-ticker .status-ok { color: var(--green); font-weight: 700; }
-  .api-ticker .status-err { color: var(--red); font-weight: 700; }
-  .api-ticker .latency { color: var(--text-muted); }
+/* Complete summary */
+.complete-summary{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;grid-column:1/-1;text-align:center;}
+.complete-summary h2{font-size:28px;font-weight:900;color:var(--green);margin-bottom:16px;}
+.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:700px;margin:16px 0;}
+.sg-item{background:var(--card);border-radius:10px;padding:14px;border:1px solid var(--border);}
+.sg-item .sv{font-size:28px;font-weight:900;font-family:'JetBrains Mono',monospace;}
+.sg-item .sl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-top:4px;}
 
-  /* Right panel */
-  .panel-right {
-    background: rgba(11,16,34,0.5); backdrop-filter: blur(10px);
-    border-left: 1px solid var(--border);
-    padding: 20px 16px; overflow-y: auto;
-    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
-  }
-  .panel-right::-webkit-scrollbar { width: 6px; }
-  .panel-right::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+/* Research pipeline */
+.research-pipeline{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+.rp-node{background:var(--card);border-radius:8px;padding:10px 14px;border:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;font-size:12px;transition:all .4s;animation:fadeUp .3s ease;}
+.rp-node .rp-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+  font-size:13px;flex-shrink:0;font-weight:700;}
+.rp-node .rp-src{color:var(--t2);font-weight:600;min-width:80px;}
+.rp-node .rp-detail{color:var(--t3);flex:1;font-size:11px;}
+.rp-node .rp-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;}
+.rp-node.rp-active{border-color:rgba(161,161,170,.3);}
+.rp-node.rp-active .rp-icon{background:rgba(161,161,170,.1);color:var(--t2);}
+.rp-node.rp-done{border-color:rgba(34,197,94,.2);}
+.rp-node.rp-done .rp-icon{background:rgba(34,197,94,.15);color:var(--green);}
+.rp-finding{background:rgba(139,92,246,.05);border:1px solid rgba(139,92,246,.15);border-radius:8px;
+  padding:10px 14px;margin-top:4px;font-size:11px;color:var(--t2);line-height:1.5;animation:fadeUp .3s ease;}
+.rp-finding b{color:var(--t1);}
 
-  .user-card {
-    background: var(--bg-card); border-radius: 12px;
-    padding: 16px; margin-bottom: 12px;
-    border: 1px solid var(--border);
-    animation: cardIn 0.4s cubic-bezier(0.16,1,0.3,1);
-    transition: all 0.3s;
-  }
-  @keyframes cardIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
-  .user-card .card-header { display: flex; align-items: center; justify-content: space-between; }
-  .user-card .user-name { font-weight: 700; font-size: 15px; }
-  .user-card .user-email { font-size: 12px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
-  .user-card .user-phone { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
-  .severity-badge {
-    font-size: 10px; padding: 4px 10px; border-radius: 6px;
-    font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
-  }
-  .sev-critical { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+/* Report */
+.report-section{background:var(--card);border-radius:10px;padding:14px;border:1px solid var(--border);
+  margin-bottom:8px;animation:fadeUp .3s ease;}
+.report-section .rs-title{font-size:12px;font-weight:700;color:var(--t1);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}
+.report-section .rs-body{font-size:11px;color:var(--t2);line-height:1.6;}
+.report-section .rs-body b{color:var(--t1);}
+.report-badge{display:inline-block;font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700;letter-spacing:.5px;}
 
-  .action-list { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
-  .action-item {
-    font-size: 13px; display: flex; align-items: center; gap: 10px;
-    color: var(--text-muted); font-weight: 500;
-  }
-  .action-icon {
-    width: 22px; height: 22px; border-radius: 50%; display: flex;
-    align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0;
-  }
-  .action-icon.done { background: rgba(34,197,94,0.15); color: var(--green); }
-  .action-icon.pending { background: rgba(71,85,105,0.15); color: var(--text-muted); }
-  .action-icon.progress { background: rgba(234,179,8,0.15); color: var(--yellow); animation: pulse 1s infinite; }
+/* Download buttons */
+.dl-btn{flex:1;padding:10px;border-radius:6px;border:1px solid var(--border);background:var(--card);
+  color:var(--t1);font-weight:600;font-size:12px;cursor:pointer;font-family:inherit;transition:all .2s;}
+.dl-btn:hover{background:var(--card2);border-color:var(--t3);}
 
-  /* Waveform */
-  .waveform-container {
-    display: none; margin-top: 12px; padding: 10px 14px;
-    background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.15);
-    border-radius: 8px; align-items: center; gap: 10px;
-  }
-  .waveform-container.active { display: flex; }
-  .waveform-label { font-size: 11px; color: var(--purple); font-weight: 600; white-space: nowrap; }
-  .waveform-bars { display: flex; align-items: center; gap: 2px; flex: 1; height: 24px; }
-  .waveform-bar {
-    width: 3px; background: var(--purple); border-radius: 2px;
-    animation: wave 0.8s ease-in-out infinite alternate;
-  }
-  @keyframes wave { 0% { height: 4px; opacity: 0.4; } 100% { height: 20px; opacity: 1; } }
-
-  /* Timeline mini */
-  .mini-timeline { margin-top: 12px; display: none; }
-  .mini-timeline.visible { display: block; }
-  .tl-track { display: flex; align-items: center; height: 4px; background: var(--border); border-radius: 2px; position: relative; margin: 8px 0 4px; }
-  .tl-fill { height: 100%; border-radius: 2px; background: var(--green); transition: width 0.5s ease; position: absolute; left: 0; top: 0; }
-  .tl-dot {
-    width: 10px; height: 10px; border-radius: 50%; position: absolute; top: -3px;
-    background: var(--border); border: 2px solid var(--bg-card);
-    transition: all 0.3s; z-index: 2;
-  }
-  .tl-dot.done { background: var(--green); }
-  .tl-dot.active { background: var(--yellow); animation: pulse 1s infinite; }
-  .tl-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
-  .tl-time { font-size: 9px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
-  .tl-time.done { color: var(--green); }
-
-  /* Upload overlay */
-  .upload-overlay {
-    position: fixed; inset: 0; z-index: 100;
-    background: rgba(6,10,19,0.92); backdrop-filter: blur(30px);
-    display: flex; align-items: center; justify-content: center;
-    transition: opacity 0.5s;
-  }
-  .upload-overlay.hidden { opacity: 0; pointer-events: none; }
-  .upload-box {
-    text-align: center; padding: 60px 80px;
-    border: 2px dashed var(--border); border-radius: 24px;
-    background: rgba(15,22,41,0.6); cursor: pointer; transition: all 0.3s;
-  }
-  .upload-box:hover { border-color: var(--blue); background: rgba(59,130,246,0.04); }
-  .upload-box .upload-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.6; }
-  .upload-box h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
-  .upload-box p { color: var(--text-muted); font-size: 14px; }
-  .upload-box .file-hint {
-    margin-top: 16px; font-size: 12px;
-    font-family: 'JetBrains Mono', monospace;
-    color: var(--text-muted); background: var(--bg-card);
-    padding: 8px 16px; border-radius: 8px; display: inline-block;
-  }
-
-  /* Scanline */
-  .scanline {
-    position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 50;
-    background: linear-gradient(90deg, transparent, var(--blue), transparent);
-    opacity: 0; animation: scanMove 3s linear infinite;
-  }
-  .scanline.active { opacity: 0.5; }
-  @keyframes scanMove { 0% { top: 0; } 100% { top: 100vh; } }
-
-  /* Footer */
-  .footer {
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
-    padding: 10px 32px;
-    background: rgba(6,10,19,0.9); backdrop-filter: blur(10px);
-    border-top: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: center; gap: 6px;
-    font-size: 11px; color: var(--text-muted);
-  }
-  .footer .sep { color: #1e293b; }
-  .footer .sponsor { color: var(--text-secondary); font-weight: 500; }
+/* Footer */
+.footer{position:fixed;bottom:0;left:0;right:0;z-index:20;padding:8px 28px;background:#080808;
+  border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;color:var(--t3);}
+.footer .sp{color:var(--t2);font-weight:500;}
+.footer .sep{color:#1e293b;}
 </style>
 </head>
 <body>
-
 <div class="bg-grid"></div>
-<div class="bg-glow bg-glow-1"></div>
-<div class="bg-glow bg-glow-2"></div>
-<div class="scanline" id="scanline"></div>
+<div class="bg-glow bg-g1"></div>
+<div class="bg-glow bg-g2"></div>
 
-<!-- Upload overlay -->
-<div class="upload-overlay" id="uploadOverlay">
-  <div class="upload-box" id="uploadBox">
-    <div class="upload-icon">&#128274;</div>
-    <h2>Upload Breach Data</h2>
-    <p>Drop a credential dump to begin autonomous response</p>
-    <div class="file-hint">breach_darkforum_x.csv — 150 records</div>
-  </div>
-</div>
-
-<!-- Banner -->
 <div class="banner">
-  <div class="brand">
-    <div class="shield">&#128737;</div>
-    <div>
-      <h1><span class="accent">SENTINEL</span></h1>
-      <div class="subtitle">Autonomous Breach Response</div>
+  <div class="brand"><div class="shield">&#128737;</div><div><h1><span class="accent">SENTINEL</span></h1><div class="sub">Autonomous Breach Response</div></div></div>
+  <div id="badge" class="badge b-idle"><div class="dot"></div><span id="badgeText">Monitoring</span></div>
+  <div><div class="timer-label">Response Time</div><div class="timer" id="timer">00:00</div></div>
+</div>
+
+<div class="pipeline">
+  <div class="pipe-step" id="ps-scan"><div class="num">1</div>Scan</div><div class="pipe-arrow" id="pa-1">&#8594;</div>
+  <div class="pipe-step" id="ps-match"><div class="num">2</div>Match</div><div class="pipe-arrow" id="pa-2">&#8594;</div>
+  <div class="pipe-step" id="ps-notify"><div class="num">3</div>Notify</div><div class="pipe-arrow" id="pa-3">&#8594;</div>
+  <div class="pipe-step" id="ps-respond"><div class="num">4</div>Respond</div><div class="pipe-arrow" id="pa-4">&#8594;</div>
+  <div class="pipe-step" id="ps-research"><div class="num">5</div>Research</div><div class="pipe-arrow" id="pa-5">&#8594;</div>
+  <div class="pipe-step" id="ps-report"><div class="num">6</div>Report</div>
+</div>
+
+<div class="main" id="mainArea">
+  <!-- LEFT: changes per phase -->
+  <div class="left-panel" id="leftPanel">
+    <div id="monitorScreen">
+      <div class="slabel">Live Threat Feed</div>
+      <div class="monitor-feed" id="monFeed"></div>
+      <div id="msScanned" style="display:none;">0</div><div id="msClean" style="display:none;">0</div><div id="msThreats" style="display:none;">0</div><div id="msUptime" style="display:none;">0h</div>
     </div>
   </div>
-  <div id="statusBadge" class="status-badge status-idle">
-    <div class="dot"></div>
-    <span id="statusText">Awaiting Data</span>
-  </div>
-  <div class="timer-block">
-    <div class="timer-label">Response Time</div>
-    <div class="timer-value" id="timer">00:00</div>
+  <!-- RIGHT: persistent incident log -->
+  <div class="right-panel">
+    <div class="slabel">Incident Log</div>
+    <div class="log-feed" id="incidentLog"></div>
+    <div class="time-bar" id="timeBar">
+      <div class="tb-row"><div class="tb-label" style="color:var(--green);">Sentinel</div><div class="tb-barbg"><div class="tb-fill" id="tbSentinel" style="width:0%;background:linear-gradient(90deg,var(--green),var(--cyan));"></div></div><div class="tb-time" id="tbTime" style="color:var(--green);">—</div></div>
+      <div class="tb-row"><div class="tb-label" style="color:var(--red);">Industry</div><div class="tb-barbg"><div class="tb-fill" id="tbIndustry" style="width:0%;background:linear-gradient(90deg,var(--red),var(--orange));"></div></div><div class="tb-time" style="color:var(--red);">277 days</div></div>
+    </div>
   </div>
 </div>
 
-<!-- Phase bar -->
-<div class="phase-bar">
-  <div class="phase-step" id="phase-ingest"><div class="num">1</div>Ingest</div>
-  <div class="phase-connector" id="conn-1"></div>
-  <div class="phase-step" id="phase-match"><div class="num">2</div>Match</div>
-  <div class="phase-connector" id="conn-2"></div>
-  <div class="phase-step" id="phase-notify"><div class="num">3</div>Notify</div>
-  <div class="phase-connector" id="conn-3"></div>
-  <div class="phase-step" id="phase-analyze"><div class="num">4</div>Decide</div>
-  <div class="phase-connector" id="conn-4"></div>
-  <div class="phase-step" id="phase-lock"><div class="num">5</div>Respond</div>
-  <div class="phase-connector" id="conn-5"></div>
-  <div class="phase-step" id="phase-complete"><div class="num">6</div>Complete</div>
-</div>
-
-<!-- Time comparison -->
-<div class="time-compare" id="timeCompare">
-  <div class="tc-row">
-    <div class="tc-label" style="color:var(--green);">Sentinel</div>
-    <div class="tc-bar-bg"><div class="tc-bar-fill" id="tcSentinel" style="width:0%; background: linear-gradient(90deg, var(--green), var(--cyan));"></div></div>
-    <div class="tc-time" id="tcSentinelTime" style="color:var(--green);">—</div>
-  </div>
-  <div class="tc-row">
-    <div class="tc-label" style="color:var(--red);">Industry Avg</div>
-    <div class="tc-bar-bg"><div class="tc-bar-fill" id="tcIndustry" style="width:0%; background: linear-gradient(90deg, var(--red), var(--orange));"></div></div>
-    <div class="tc-time" style="color:var(--red);">277 days</div>
-  </div>
-</div>
-
-<!-- Main grid -->
-<div class="main" id="mainGrid">
-
-  <!-- Left panel -->
-  <div class="panel-left">
-    <div class="section-label">Credential Scan</div>
-
-    <!-- Particle grid -->
-    <div class="particle-container">
-      <div class="section-label">150 Leaked Records</div>
-      <div class="particle-grid" id="particleGrid"></div>
-      <div class="particle-legend">
-        <span><div class="legend-dot" style="background:var(--red);"></div> Critical</span>
-        <span><div class="legend-dot" style="background:var(--yellow);"></div> Warning</span>
-        <span><div class="legend-dot" style="background:var(--green);"></div> Safe</span>
-      </div>
-    </div>
-
-    <!-- Stats -->
-    <div class="stat-row">
-      <div class="stat-card critical">
-        <div class="label">Critical</div>
-        <div class="value" id="statCritical">—</div>
-      </div>
-      <div class="stat-card warning">
-        <div class="label">Warning</div>
-        <div class="value" id="statWarning">—</div>
-      </div>
-      <div class="stat-card safe">
-        <div class="label">Safe</div>
-        <div class="value" id="statSafe">—</div>
-      </div>
-    </div>
-
-    <!-- Breach source -->
-    <div class="breach-source" id="breachSource">
-      <div class="section-label">Breach Source</div>
-      <div class="bs-row"><span class="bs-key">Origin</span><span class="bs-val">darkforum_x</span></div>
-      <div class="bs-row"><span class="bs-key">Type</span><span class="bs-val">E-commerce DB</span></div>
-      <div class="bs-row"><span class="bs-key">Leaked</span><span class="bs-val">2026-03-25</span></div>
-      <div class="bs-row"><span class="bs-key">Format</span><span class="bs-val">email + bcrypt</span></div>
-    </div>
-
-    <div style="flex:1;"></div>
-
-    <!-- Progress ring -->
-    <div class="progress-section" id="progressSection">
-      <div class="section-label" style="margin-bottom:8px;">Accounts Secured</div>
-      <div class="progress-ring">
-        <svg width="110" height="110">
-          <circle class="bg" cx="55" cy="55" r="48"></circle>
-          <circle class="fg" id="progressCircle" cx="55" cy="55" r="48"
-            stroke-dasharray="301.6" stroke-dashoffset="301.6"></circle>
-        </svg>
-        <div class="ring-text">
-          <div class="ring-num"><span id="progressNum">0</span><span class="ring-total">/3</span></div>
-          <div class="ring-label">Secured</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Center panel -->
-  <div class="panel-center">
-    <div class="section-label" style="margin-bottom:14px;">Agent Reasoning</div>
-    <div id="logContainer"></div>
-  </div>
-
-  <!-- Right panel -->
-  <div class="panel-right">
-    <div class="section-label" style="margin-bottom:14px;">Response Log — 3 Affected Users</div>
-    <div id="userCards"></div>
-  </div>
-</div>
-
-<!-- Footer -->
 <div class="footer">
-  Powered by
-  <span class="sponsor">Anthropic</span><span class="sep">|</span>
-  <span class="sponsor">Auth0</span><span class="sep">|</span>
-  <span class="sponsor">Ghost</span><span class="sep">|</span>
-  <span class="sponsor">Bland AI</span><span class="sep">|</span>
-  <span class="sponsor">Airbyte</span><span class="sep">|</span>
-  <span class="sponsor">Aerospike</span><span class="sep">|</span>
-  <span class="sponsor">Overmind</span><span class="sep">|</span>
-  <span class="sponsor">Truefoundry</span><span class="sep">|</span>
-  <span class="sponsor">Macroscope</span>
+  Powered by <span class="sp">Anthropic</span><span class="sep">|</span><span class="sp">Auth0</span><span class="sep">|</span>
+  <span class="sp">Ghost</span><span class="sep">|</span><span class="sp">Bland AI</span><span class="sep">|</span>
+  <span class="sp">Airbyte</span><span class="sep">|</span><span class="sp">Aerospike</span><span class="sep">|</span>
+  <span class="sp">Overmind</span><span class="sep">|</span><span class="sp">Truefoundry</span><span class="sep">|</span><span class="sp">Macroscope</span>
 </div>
 
 <script>
-// ===== CONFIG =====
-const BLAND_API_KEY = "org_81e318d0be774ddfd4c97663dc84d55114609a59349d6259714e742c28aea6fa5bfa58167dab1e9d0a8969";
-const PHONE_NUMBER = "+46761658009";
-
-const breachUsers = [
-  { email: "sarah.chen@acme.com", name: "Sarah Chen", phone: "+1XXXXXXXXXX" },
-  { email: "alfred.sjoqvist@acme.com", name: "Alfred Sjöqvist", phone: PHONE_NUMBER },
-  { email: "mike.ross@acme.com", name: "Mike Ross", phone: "+1XXXXXXXXXX" },
+const BLAND_API_KEY="org_81e318d0be774ddfd4c97663dc84d55114609a59349d6259714e742c28aea6fa5bfa58167dab1e9d0a8969";
+const PHONE_NUMBER="+46761658009";
+const breachUsers=[
+  {email:"sarah.chen@acme.com",name:"Sarah Chen",phone:"+1XXXXXXXXXX",mock:true,duration:35,noAnswer:false},
+  {email:"alfred.sjoqvist@acme.com",name:"Alfred Sj\u00f6qvist",phone:PHONE_NUMBER,mock:false,duration:0,noAnswer:false},
+  {email:"mike.ross@acme.com",name:"Mike Ross",phone:"+1XXXXXXXXXX",mock:true,duration:62,noAnswer:false},
+  {email:"priya.patel@acme.com",name:"Priya Patel",phone:"+1XXXXXXXXXX",mock:true,duration:28,noAnswer:false},
+  {email:"james.lee@acme.com",name:"James Lee",phone:"+1XXXXXXXXXX",mock:true,duration:0,noAnswer:true},
+  {email:"emma.wilson@acme.com",name:"Emma Wilson",phone:"+1XXXXXXXXXX",mock:true,duration:45,noAnswer:false},
+  {email:"carlos.ruiz@acme.com",name:"Carlos Ruiz",phone:"+1XXXXXXXXXX",mock:true,duration:0,noAnswer:true},
+  {email:"nina.zhao@acme.com",name:"Nina Zhao",phone:"+1XXXXXXXXXX",mock:true,duration:52,noAnswer:false},
 ];
+const TOTAL=150,CRIT_IDX=[23,37,67,78,91,102,112,139],WARN_IDX=[5,19,41,58,79,95,108,134];
+let timerStart=null,timerInt=null,running=false;
 
-// 150 particles: 3 critical (indices 23, 67, 112), 8 warning, rest safe
-const TOTAL_PARTICLES = 150;
-const CRITICAL_IDX = [23, 67, 112];
-const WARNING_IDX = [5, 19, 41, 58, 79, 95, 108, 134];
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const $=id=>document.getElementById(id);
+const leftPanel=$('leftPanel');
+const iLog=$('incidentLog');
 
-let timerStart = null, timerInterval = null;
+function updateTimer(){if(!timerStart)return;const e=Math.floor((Date.now()-timerStart)/1000);
+  $('timer').textContent=String(Math.floor(e/60)).padStart(2,'0')+':'+String(e%60).padStart(2,'0');}
+function setBadge(cls,txt){$('badge').className='badge '+cls;$('badgeText').textContent=txt;}
+function setPhase(name){
+  const p=['scan','match','notify','respond','research','report'],i=p.indexOf(name);
+  p.forEach((s,j)=>{const el=$('ps-'+s),ar=$('pa-'+(j+1));
+    if(!el)return;
+    if(j<i){el.className='pipe-step done';if(ar)ar.className='pipe-arrow done';}
+    else if(j===i){el.className='pipe-step active';}
+    else{el.className='pipe-step';if(ar)ar.className='pipe-arrow';}});}
 
-// ===== INIT PARTICLES =====
-const grid = document.getElementById('particleGrid');
-for (let i = 0; i < TOTAL_PARTICLES; i++) {
-  const d = document.createElement('div');
-  d.className = 'particle';
-  d.id = 'p-' + i;
-  grid.appendChild(d);
+const phaseSnapshots={};
+let pipelineComplete=false;
+
+function setLeft(html){leftPanel.innerHTML=html;}
+
+function saveSnapshot(phase){
+  phaseSnapshots[phase]=leftPanel.innerHTML;
 }
 
-// ===== HELPERS =====
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-function updateTimer() {
-  if (!timerStart) return;
-  const elapsed = Math.floor((Date.now() - timerStart) / 1000);
-  document.getElementById('timer').textContent =
-    String(Math.floor(elapsed/60)).padStart(2,'0') + ':' + String(elapsed%60).padStart(2,'0');
-}
-
-function setStatus(cls, text) {
-  document.getElementById('statusBadge').className = 'status-badge ' + cls;
-  document.getElementById('statusText').textContent = text;
-}
-
-function setPhase(name) {
-  const phases = ['ingest','match','analyze','lock','notify','complete'];
-  const idx = phases.indexOf(name);
-  phases.forEach((p, i) => {
-    const el = document.getElementById('phase-' + p);
-    const conn = document.getElementById('conn-' + (i + 1));
-    if (i < idx) { el.className = 'phase-step done'; if(conn) conn.className = 'phase-connector done'; }
-    else if (i === idx) { el.className = 'phase-step active'; }
-    else { el.className = 'phase-step'; if(conn) conn.className = 'phase-connector'; }
+function enableTabs(){
+  pipelineComplete=true;
+  document.querySelector('.pipeline').classList.add('tabbed');
+  const phases=['scan','match','notify','respond','research','report'];
+  phases.forEach(p=>{
+    const el=$('ps-'+p);
+    if(!el)return;
+    el.addEventListener('click',()=>{
+      if(!pipelineComplete)return;
+      // Remove active from all
+      phases.forEach(pp=>{const e=$('ps-'+pp);if(e)e.classList.remove('tab-active');});
+      el.classList.add('tab-active');
+      if(phaseSnapshots[p]) leftPanel.innerHTML=phaseSnapshots[p];
+    });
   });
 }
 
-function addLog(msg, type = '', phase = '') {
-  const c = document.getElementById('logContainer');
-  const time = new Date().toTimeString().slice(0, 8);
-  const tag = phase ? `<span class="phase-tag">${phase}</span>` : '';
-  const cls = type === 'critical' ? 'critical-log' : type;
-  const div = document.createElement('div');
-  div.className = 'log-entry ' + cls;
-  div.innerHTML = `<div class="log-header"><span class="time">${time}</span>${tag}</div><div class="msg">${msg}</div>`;
-  c.appendChild(div);
-  c.scrollTop = c.scrollHeight;
+// Add to incident log — newest on top
+function ilog(msg,cls=''){
+  const d=document.createElement('div');d.className='lf-entry '+(cls||'');
+  d.innerHTML=`<span class="lf-time">${new Date().toTimeString().slice(0,8)}</span>${msg}`;
+  iLog.prepend(d);
+}
+function iapi(method,url,status,ms){
+  const d=document.createElement('div');d.className='api-tick';
+  d.innerHTML=`<span class="am">${method}</span><span>${url}</span><span class="aok">${status}</span><span>${ms}ms</span>`;
+  iLog.prepend(d);
 }
 
-function addApiTick(method, url, status, ms) {
-  const c = document.getElementById('logContainer');
-  const div = document.createElement('div');
-  div.className = 'api-ticker';
-  const sClass = status < 300 ? 'status-ok' : 'status-err';
-  div.innerHTML = `<span class="method">${method}</span><span class="url">${url}</span><span class="${sClass}">${status}</span><span class="latency">${ms}ms</span>`;
-  c.appendChild(div);
-  c.scrollTop = c.scrollHeight;
+function makeWaveBars(){let b='';for(let i=0;i<25;i++)b+=`<div class="wbar" style="animation-delay:${(Math.random()*.6).toFixed(2)}s"></div>`;return b;}
+
+function userCardHTML(u,steps){
+  const uid=u.email.replace(/[@.]/g,'-');
+  return `<div class="ucard" id="uc-${uid}"><div class="uname">${u.name}</div><div class="uemail">${u.email}</div>
+    <div class="ubadge">CRITICAL</div>
+    <div class="ustatus" id="ust-${uid}" style="font-size:11px;color:var(--t3);margin-top:6px;font-weight:500;"></div>
+    <div class="usteps" id="us-${uid}">${steps.map(s=>
+    `<div class="ustep" id="${uid}-${s.id}"><div class="si si-pending">&#8226;</div><span>${s.text}</span></div>`).join('')}</div>
+    <div class="wave" id="wv-${uid}"><div class="wave-label">&#128266; LIVE</div><div class="wave-bars">${makeWaveBars()}</div></div></div>`;}
+
+function setUserStatus(email,text,color){
+  const uid=email.replace(/[@.]/g,'-'),el=document.getElementById('ust-'+uid);
+  if(el){el.textContent=text;el.style.color=color||'var(--t3)';}
+}
+function setActionText(email,stepId,text){
+  const uid=email.replace(/[@.]/g,'-'),el=document.getElementById(`${uid}-${stepId}`);
+  if(el){const sp=el.querySelector('span');if(sp)sp.textContent=text;}
 }
 
-function animateCount(id, target, dur = 800) {
-  const el = document.getElementById(id);
-  const start = parseInt(el.textContent) || 0;
-  const t0 = performance.now();
-  (function tick(now) {
-    const t = Math.min((now - t0) / dur, 1);
-    el.textContent = Math.round(start + (target - start) * (1 - Math.pow(1 - t, 3)));
-    if (t < 1) requestAnimationFrame(tick);
-  })(performance.now());
+function setStep(email,stepId,state){
+  const uid=email.replace(/[@.]/g,'-'),el=document.getElementById(`${uid}-${stepId}`);
+  if(!el)return;const si=el.querySelector('.si');
+  el.className='ustep'+(state==='done'?' s-done':state==='active'?' s-active':'');
+  si.className='si si-'+state;
+  si.innerHTML=state==='done'?'&#10003;':state==='active'?'&#8987;':'&#8226;';}
+function setCardState(email,cls){const uid=email.replace(/[@.]/g,'-'),el=document.getElementById('uc-'+uid);if(el)el.className='ucard '+cls;}
+function setWave(email,on){const uid=email.replace(/[@.]/g,'-'),el=document.getElementById('wv-'+uid);if(el)el.className='wave'+(on?' active':'');}
+
+function addLog(container,msg,cls=''){
+  const d=document.createElement('div');d.className='lf-entry '+(cls||'');
+  d.innerHTML=`<span class="lf-time">${new Date().toTimeString().slice(0,8)}</span>${msg}`;
+  container.appendChild(d);container.scrollTop=container.scrollHeight;}
+function addApi(container,method,url,status,ms){
+  const d=document.createElement('div');d.className='api-tick';
+  d.innerHTML=`<span class="am">${method}</span><span>${url}</span><span class="aok">${status}</span><span>${ms}ms</span>`;
+  container.appendChild(d);container.scrollTop=container.scrollHeight;}
+
+async function callBland(user){
+  try{
+    const r=await fetch('/api/bland/call',{method:'POST',headers:{'x-bland-key':BLAND_API_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({phone_number:user.phone,from:null,
+        task:`You are Alex from Acme Corp security. Be concise and direct. Keep sentences short. Get to the point fast. Don't ramble.
+
+THE SITUATION: A site called darkforum_x was breached. ${user.name}'s email (${user.email}) and password hash were in the leak. The hash matches their Acme account — meaning they reused their password. We've temporarily locked their account.
+
+YOUR JOB:
+1. Briefly explain the breach (2-3 sentences max)
+2. Tell them their account is locked
+3. Ask: keep it locked or unlock it?
+4. Confirm their choice
+5. Tell them to reset at acme.com/reset
+6. Ask if they have questions — if not, wrap up
+
+STYLE: Be warm but efficient. Short sentences. Don't over-explain unless they ask. If they ask questions, answer them clearly and briefly. If they seem to understand, move on quickly. Don't repeat yourself.
+
+IF THEY ASK:
+- What is darkforum_x: "An e-commerce site that got hacked"
+- Was my account accessed: "No, we locked it as soon as we detected the match"
+- What's a password hash: "An encrypted version of your password — the match means you used the same password"
+- Can I talk to a human: "Sure, email security@acme.com"`,
+        first_sentence:`Hey ${user.name}, this is Alex from Acme Corp security. Quick heads up — a site called darkforum x was breached, and your credentials were in the leak. We've locked your account to be safe. I just need a minute to explain and get your preference on next steps.`,
+        max_duration:10,record:true,voice:"mason",wait_for_greeting:false,language:"en",temperature:0.7,
+        interruption_threshold:200,block_interruptions:false,background_track:"none",noise_cancellation:true})});
+    return await r.json();
+  }catch(e){return{status:'error',error:e.message};}
 }
 
-function updateProgress(n) {
-  document.getElementById('progressNum').textContent = n;
-  const circ = document.getElementById('progressCircle');
-  circ.setAttribute('stroke-dashoffset', 301.6 - (301.6 * n / 3));
-  if (n === 3) { circ.style.stroke = 'var(--green)'; circ.style.filter = 'drop-shadow(0 0 10px var(--green-glow))'; }
+// ===== MONITORING LOOP =====
+const monSources=['pastebin.com','ghostbin.me','haveibeenpwned.com','raidforums.cc','breachdb.io',
+  'leakcheck.net','dehashed.com','snusbase.com','weleakinfo.to','databases.today','leak.sx',
+  'cracked.io','nulled.to','exploit.in','xss.is','breached.vc','telegram/leaks_db','anonfiles.com',
+  'mega.nz/dumps','discord/breach-alerts','darkforum_x.onion','ramp4u.io','hydra.market',
+  'dread.onion','0day.today'];
+
+let monInterval=null, monCount=0;
+
+function startMonitoring(){
+  const feed=$('monFeed'), srcList=$('srcList');
+  if(!feed||!srcList)return;
+
+  // Populate source list
+  const activeSources=['pastebin.com','haveibeenpwned.com','dehashed.com','snusbase.com','breachdb.io',
+    'leakcheck.net','exploit.in','telegram/leaks_db','darkforum_x.onion','raidforums.cc'];
+  activeSources.forEach(s=>{
+    const d=document.createElement('div');d.className='source-item';
+    d.innerHTML=`<span>${s}</span><span class="src-status">CLEAN</span>`;
+    srcList.appendChild(d);
+  });
+
+  $('msUptime').textContent='14h';
+  $('msScanned').textContent='847';
+  $('msClean').textContent='847';
+  monCount=847;
+
+  // Continuous feed
+  monInterval=setInterval(()=>{
+    if(running)return clearInterval(monInterval);
+    monCount++;
+    const src=monSources[Math.floor(Math.random()*monSources.length)];
+    const now=new Date().toTimeString().slice(0,8);
+    const d=document.createElement('div');
+    d.innerHTML=`<span class="mf-time">${now}</span> <span class="mf-ok">&#10003;</span> ${src} <span class="mf-info">— no new dumps</span>`;
+    feed.appendChild(d);
+    if(feed.children.length>30)feed.removeChild(feed.firstChild);
+    feed.scrollTop=feed.scrollHeight;
+    $('msScanned').textContent=monCount;
+    $('msClean').textContent=monCount;
+  },800);
 }
 
-function addUserCard(user, idx) {
-  const c = document.getElementById('userCards');
-  const uid = user.email.replace(/[@.]/g, '-');
-  const div = document.createElement('div');
-  div.className = 'user-card';
-  div.id = 'card-' + uid;
-
-  // Generate waveform bars
-  let bars = '';
-  for (let i = 0; i < 30; i++) {
-    const delay = (Math.random() * 0.6).toFixed(2);
-    bars += `<div class="waveform-bar" style="animation-delay:${delay}s;"></div>`;
-  }
-
-  div.innerHTML = `
-    <div class="card-header">
-      <div>
-        <div class="user-name">${user.name}</div>
-        <div class="user-email">${user.email}</div>
-        <div class="user-phone">${user.phone}</div>
-      </div>
-      <span class="severity-badge sev-critical">CRITICAL</span>
-    </div>
-    <div class="action-list" id="actions-${uid}">
-      <div class="action-item" id="${uid}-call">
-        <div class="action-icon pending">&#8226;</div><span>Voice notification</span>
-      </div>
-      <div class="action-item" id="${uid}-transcript">
-        <div class="action-icon pending">&#8226;</div><span>Transcript analyzed</span>
-      </div>
-      <div class="action-item" id="${uid}-decision">
-        <div class="action-icon pending">&#8226;</div><span>Decision: pending</span>
-      </div>
-      <div class="action-item" id="${uid}-lock">
-        <div class="action-icon pending">&#8226;</div><span>Account action</span>
-      </div>
-    </div>
-    <div class="waveform-container" id="wave-${uid}">
-      <div class="waveform-label">&#128266; LIVE CALL</div>
-      <div class="waveform-bars">${bars}</div>
-    </div>
-    <div class="mini-timeline" id="tl-${uid}">
-      <div class="tl-track">
-        <div class="tl-fill" id="tl-fill-${uid}" style="width:0%;"></div>
-        <div class="tl-dot" id="tl-d0-${uid}" style="left:0%;"></div>
-        <div class="tl-dot" id="tl-d1-${uid}" style="left:33%;"></div>
-        <div class="tl-dot" id="tl-d2-${uid}" style="left:66%;"></div>
-        <div class="tl-dot" id="tl-d3-${uid}" style="left:100%;"></div>
-      </div>
-      <div class="tl-labels">
-        <span class="tl-time" id="tl-t0-${uid}">Call</span>
-        <span class="tl-time" id="tl-t1-${uid}">Transcript</span>
-        <span class="tl-time" id="tl-t2-${uid}">Decide</span>
-        <span class="tl-time" id="tl-t3-${uid}">Action</span>
-      </div>
-    </div>
-  `;
-  c.appendChild(div);
-}
-
-function setAction(email, actionId, state) {
-  const uid = email.replace(/[@.]/g, '-');
-  const el = document.getElementById(`${uid}-${actionId}`);
-  if (!el) return;
-  const icon = el.querySelector('.action-icon');
-  icon.className = 'action-icon ' + state;
-  icon.innerHTML = state === 'done' ? '&#10003;' : state === 'progress' ? '&#8987;' : '&#8226;';
-}
-
-function setWaveform(email, active) {
-  const uid = email.replace(/[@.]/g, '-');
-  const el = document.getElementById('wave-' + uid);
-  if (el) el.className = 'waveform-container' + (active ? ' active' : '');
-}
-
-function setTimeline(email, step) {
-  const uid = email.replace(/[@.]/g, '-');
-  const tl = document.getElementById('tl-' + uid);
-  if (!tl) return;
-  tl.className = 'mini-timeline visible';
-  const fill = document.getElementById('tl-fill-' + uid);
-  const pcts = [0, 33, 66, 100];
-  fill.style.width = pcts[step] + '%';
-  for (let i = 0; i <= step; i++) {
-    document.getElementById(`tl-d${i}-${uid}`).className = 'tl-dot done';
-    const timeEl = document.getElementById(`tl-t${i}-${uid}`);
-    timeEl.className = 'tl-time done';
-    const now = new Date();
-    timeEl.textContent = now.toTimeString().slice(0, 8);
-  }
-}
-
-async function colorParticles() {
-  // Scan effect: light up particles in sequence
-  for (let i = 0; i < TOTAL_PARTICLES; i++) {
-    const p = document.getElementById('p-' + i);
-    if (CRITICAL_IDX.includes(i)) p.className = 'particle critical';
-    else if (WARNING_IDX.includes(i)) p.className = 'particle warning';
-    else p.className = 'particle safe';
-    if (i % 10 === 0) await sleep(40);
-  }
-}
-
-async function callWithBland(user) {
-  if (!BLAND_API_KEY) {
-    addLog(`&#9888; <b>Bland API key not set</b> — simulating call to ${user.name}`, 'action', 'NOTIFY');
-    await sleep(2000);
-    return { status: 'simulated', call_id: 'sim_' + Math.random().toString(36).slice(2) };
-  }
-
-  try {
-    const resp = await fetch('/api/bland/call', {
-      method: 'POST',
-      headers: {
-        'x-bland-key': BLAND_API_KEY,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        phone_number: user.phone,
-        from: null,
-        task: `You are Alex, a friendly and professional security operations analyst at Acme Corp. You're having a phone conversation with ${user.name} about a security incident affecting their account.
-
-You must be fully conversational. Answer every question they ask. Never go silent. Never stop mid-sentence. If they interrupt you, acknowledge what they said and continue. If they ask you to clarify, explain again in simpler terms. Keep talking until the conversation is naturally complete.
-
-HERE IS WHAT HAPPENED (explain this in your own words, naturally, across the conversation):
-Two days ago, a third-party e-commerce website called "darkforum_x" suffered a data breach. Hackers stole their entire user database and posted it publicly online. The leaked data included about 150 email addresses and their associated password hashes. Our automated security system scanned this leaked data and cross-referenced it against our own user database at Acme Corp. Unfortunately, ${user.name}'s email address (${user.email}) showed up in the leak, and the password hash from the leak matches the one on file at Acme Corp. This means ${user.name} likely used the same password on both darkforum_x and their Acme Corp account. That's dangerous because anyone who has the leaked data could potentially access their Acme Corp account.
-
-WHAT WE ALREADY DID:
-As soon as our system detected the match, we temporarily locked ${user.name}'s Acme Corp account as a precaution. This means nobody can log into it right now — not even ${user.name}. This was done automatically to protect them while we sort this out.
-
-WHAT YOU NEED FROM THEM (this is the key question — ask it clearly):
-You need to ask ${user.name}: "Now that you understand the situation, would you like us to keep your account locked until you've had a chance to reset your password? Or would you prefer we unlock it now so you can still access it, and you'll just reset your password on your own time?" Wait for their answer. Then repeat their choice back to them to confirm.
-
-ALSO TELL THEM:
-- They should go to acme.com/reset to create a new password
-- They should also change their password on any other website where they used the same password
-- If they have questions they can email security@acme.com
-
-CONVERSATION RULES:
-- Talk like a normal person. Use phrases like "yeah", "so basically", "the thing is", "that makes sense"
-- NEVER go silent. If there's a pause, ask if they have questions or if something wasn't clear
-- If they ask what darkforum_x is, explain it's a third-party e-commerce site that got hacked
-- If they ask how their data was leaked, explain the site's database was stolen and posted online
-- If they ask if anyone accessed their Acme account, say "Not that we can see — we locked it as soon as we detected the match, so we believe we caught it in time"
-- If they ask what a password hash is, explain it simply: "It's basically an encrypted version of your password. The fact that it matches means the same password was used"
-- If they ask who you are, you're Alex, part of the security operations team at Acme Corp
-- Stay on the line and keep the conversation going until they're satisfied and you've confirmed their lock/unlock preference
-- When wrapping up, summarize: what happened, what action you're taking on their account, and what they need to do next`,
-        first_sentence: `Hey ${user.name}, this is Alex from the security team over at Acme Corp. How's it going? Listen, I'm reaching out because something came up with your account that I wanted to walk you through real quick.`,
-        max_duration: 10,
-        record: true,
-        voice: "mason",
-        wait_for_greeting: false,
-        language: "en",
-        temperature: 0.7,
-        interruption_threshold: 300,
-        background_track: "none",
-      }),
-    });
-    const data = await resp.json();
-    addApiTick('POST', 'api.bland.ai/v1/calls', resp.status, Math.floor(80 + Math.random() * 120));
-    return data;
-  } catch (err) {
-    addLog(`&#10060; Call to ${user.name} failed: ${err.message}`, 'critical', 'NOTIFY');
-    return { status: 'error', error: err.message };
-  }
-}
+startMonitoring();
 
 // ===== MAIN SIMULATION =====
-async function runSimulation() {
-  document.getElementById('uploadOverlay').classList.add('hidden');
-  document.getElementById('scanline').classList.add('active');
+async function run(){
+  if(running)return;running=true;
+  timerStart=Date.now();timerInt=setInterval(updateTimer,50);
 
-  timerStart = Date.now();
-  timerInterval = setInterval(updateTimer, 50);
+  // === SCAN ===
+  setPhase('scan');setBadge('b-scan','Deep Scan');
 
-  // Create all user cards upfront
-  breachUsers.forEach((u, i) => addUserCard(u, i));
+  ilog('<b>Deep scan initiated across dark web sources...</b>','lf-action');
 
-  // === PHASE 1: INGEST ===
-  document.querySelector('.bg-glow-1').style.background = 'var(--red)';
-  document.querySelector('.bg-glow-1').style.opacity = '0.18';
-  setStatus('status-red', 'Breach Detected');
-  setPhase('ingest');
-  addLog('&#128680; <b>Breach file uploaded.</b> Initiating autonomous response protocol.', 'critical', 'INGEST');
-  await sleep(1200);
+  const domains=['pastebin.com','ghostbin.me','darkforum_x.onion','haveibeenpwned.com','raidforums.cc',
+    'breachdb.io','leakcheck.net','dehashed.com','snusbase.com','weleakinfo.to','databases.today',
+    'leak.sx','cracked.io','nulled.to','exploit.in','xss.is','breached.vc','telegram/leaks_db',
+    'anonfiles.com','mega.nz/dumps','discord/breach-alerts'];
 
-  setStatus('status-yellow', 'Analyzing');
-  addLog('Connecting to Airbyte ingestion pipeline for <b>breach_darkforum_x.csv</b>...', 'action', 'INGEST');
-  addApiTick('POST', 'airbyte.io/api/v1/sources/read', 200, 234);
-  await sleep(1200);
+  setLeft(`<div class="slabel">Scanning for Data Breach</div><div class="scan-domains" id="scanDoms"></div><div class="scan-counter" id="scanCount">Scanned: <b>0</b> / ${domains.length} sources</div>`);
+  const scanDoms=$('scanDoms'),scanCount=$('scanCount');
 
-  document.getElementById('breachSource').classList.add('visible');
-  addLog('Parsed <b>150</b> leaked credential pairs (email + bcrypt hash) from darkforum_x e-commerce breach.', 'success', 'INGEST');
+  for(let i=0;i<domains.length;i++){
+    const isHit=domains[i]==='darkforum_x.onion';
+    const d=document.createElement('div');
+    if(isHit){d.className='hit';d.textContent=`\u26a0 ${domains[i]} — BREACH DATA FOUND`;}
+    else{d.className='checked';d.textContent=`\u2713 ${domains[i]} — clean`;}
+    scanDoms.appendChild(d);scanDoms.scrollTop=scanDoms.scrollHeight;
+    scanCount.innerHTML=`Scanned: <b>${i+1}</b> / ${domains.length} sources`;
+    if(!isHit) ilog(`&#10003; ${domains[i]} — clean`,'lf-success');
+    if(isHit){ilog(`&#9888; <b>BREACH FOUND on ${domains[i]}</b>  — credential dump detected!`,'lf-crit');await sleep(200);break;}
+    await sleep(120);
+  }
   await sleep(800);
 
-  // === PHASE 2: MATCH ===
-  setPhase('match');
-  addLog('Cross-referencing against <b>50 registered users</b> in Ghost database...', 'action', 'MATCH');
-  addApiTick('SELECT', 'ghost-db/users (50 rows)', 200, 12);
-  await sleep(600);
+  // Breach found!
+  setBadge('b-red','Breach Found');
 
-  // Animate particle grid
-  addLog('Scanning credentials...', '', 'MATCH');
-  await colorParticles();
+  setLeft(`<div class="breach-flash" style="display:flex"><h2 style="color:var(--red);font-size:16px;letter-spacing:2px;">BREACH DETECTED</h2>
+    <div class="detail" style="margin-top:12px;">Credential dump found on <b>darkforum_x.onion</b><br>150 records &mdash; email + bcrypt hash &mdash; e-commerce platform compromise</div></div>`);
+  ilog('&#128680; <b>BREACH DETECTED</b> — 150 credentials on darkforum_x.onion. Initiating response.','lf-crit');
+  await sleep(2500);
+  saveSnapshot('scan');
 
-  animateCount('statCritical', 3, 800);
-  await sleep(300);
-  animateCount('statWarning', 8, 800);
-  await sleep(300);
-  animateCount('statSafe', 139, 800);
+  // === MATCH ===
+  setPhase('match');setBadge('b-orange','Matching');
+  ilog('Cross-referencing leaked credentials against user database...','lf-action');
+  iapi('SELECT','ghost-db/users (50 rows)',200,12);
 
-  addLog('&#128308; <b>CRITICAL: 3 users</b> — password hash matches. Accounts fully compromised.', 'critical', 'MATCH');
-  await sleep(400);
-  addLog('&#128992; <b>WARNING: 8 users</b> — email found, different password.', '', 'MATCH');
-  await sleep(400);
-  addLog('&#128994; <b>SAFE: 139 records</b> — no match.', 'success', 'MATCH');
-  await sleep(1200);
+  setLeft(`<div class="slabel">Credential Matching &mdash; 150 Records</div>
+    <div class="match-grid" id="mGrid"></div>
+    <div class="match-stats"><div class="match-stat ms-c"><div class="mv" id="mcVal">-</div><div class="ml">Critical</div></div>
+    <div class="match-stat ms-w"><div class="mv" id="mwVal">-</div><div class="ml">Warning</div></div>
+    <div class="match-stat ms-s"><div class="mv" id="msVal">-</div><div class="ml">Safe</div></div></div>`);
 
-  // === PHASE 3: NOTIFY (Call users FIRST, collect data) ===
-  setPhase('notify');
-  setStatus('status-orange', 'Contacting Users');
-  addLog(`<b>&#128222; Initiating voice calls to 3 compromised users...</b><br><br><em>Before locking anything, Sentinel talks to the human. The call transcript determines the response.</em>`, 'action', 'NOTIFY');
-  await sleep(1000);
+  const mGrid=$('mGrid');
+  for(let i=0;i<TOTAL;i++){const d=document.createElement('div');d.className='dot';d.id='dt-'+i;mGrid.appendChild(d);}
 
-  // Store call results and transcripts for each user
-  const callResults = [];
-
-  for (let i = 0; i < breachUsers.length; i++) {
-    const u = breachUsers[i];
-    const isLiveCall = u.phone === PHONE_NUMBER;
-    setAction(u.email, 'call', 'progress');
-    setWaveform(u.email, true);
-
-    addLog(`&#128222; <b>Calling ${u.name}</b> at <code>${u.phone}</code>...`, 'action', 'NOTIFY');
-
-    if (isLiveCall) {
-      // Real Bland AI call to Alfred
-      const result = await callWithBland(u);
-      if (result.call_id || result.status === 'simulated') {
-        addLog(`&#9989; Call connected to <b>${u.name}</b> — ID: <code>${result.call_id || 'sim'}</code>`, 'success', 'NOTIFY');
-        addLog(`&#128266; <b>LIVE CALL IN PROGRESS</b> — Speaking with ${u.name}. Collecting conversation data...`, 'action', 'NOTIFY');
-
-        let transcript = null;
-        let callLength = null;
-
-        if (result.call_id) {
-          // Poll for call completion
-          for (let poll = 0; poll < 60; poll++) {
-            await sleep(5000);
-            try {
-              const check = await fetch(`/api/bland/call/${result.call_id}`, {
-                headers: { 'x-bland-key': BLAND_API_KEY }
-              });
-              const callData = await check.json();
-              if (callData.status === 'completed' || callData.status === 'ended' || callData.queue_status === 'complete' || callData.completed) {
-                callLength = callData.call_length || callData.duration || null;
-                // Extract transcript
-                if (callData.transcripts && callData.transcripts.length > 0) {
-                  transcript = callData.transcripts.map(t => `${t.user}: ${t.text}`).join('\n');
-                } else if (callData.concatenated_transcript) {
-                  transcript = callData.concatenated_transcript;
-                } else if (callData.transcript) {
-                  transcript = callData.transcript;
-                }
-                addLog(`&#128222; Call with <b>${u.name}</b> completed. Duration: ${callLength || '?'}s`, 'success', 'NOTIFY');
-                break;
-              }
-            } catch(e) { /* keep polling */ }
-          }
-        }
-
-        setWaveform(u.email, false);
-        setAction(u.email, 'call', 'done');
-        setTimeline(u.email, 0);
-
-        // Show transcript retrieval
-        setAction(u.email, 'transcript', 'progress');
-        await sleep(800);
-
-        if (transcript) {
-          addLog(`&#128196; <b>Transcript retrieved for ${u.name}:</b><br><br><em style="white-space:pre-wrap;font-size:12px;color:var(--text-secondary);">${transcript.slice(0, 600)}${transcript.length > 600 ? '...' : ''}</em>`, 'action', 'NOTIFY');
-        } else {
-          transcript = `Agent: Hello ${u.name}, this is Acme Corp security. Your credentials were found in a breach. Your account has been locked.\nUser: Oh no, what happened?\nAgent: A third-party e-commerce platform was breached. Your email and password were in the dump.\nUser: Yes, I understand. Please go ahead and secure my account.\nAgent: Done. Please reset your password at acme.com/reset.`;
-          addLog(`&#128196; <b>Transcript retrieved for ${u.name}</b> (${callLength || '~30'}s conversation captured)`, 'action', 'NOTIFY');
-        }
-        setAction(u.email, 'transcript', 'done');
-        setTimeline(u.email, 1);
-
-        callResults.push({ user: u, transcript, callLength, live: true });
-
-      } else {
-        addLog(`Call to ${u.name}: ${JSON.stringify(result)}`, 'critical', 'NOTIFY');
-        setWaveform(u.email, false);
-        setAction(u.email, 'call', 'done');
-        callResults.push({ user: u, transcript: null, callLength: null, live: true, failed: true });
-      }
-    } else {
-      // Simulated calls for other users
-      await sleep(1500);
-      const dur = 15 + Math.floor(Math.random() * 25);
-      const simTranscript = u.name === 'Sarah Chen'
-        ? `Agent: Hi Sarah, this is Acme Corp security. We found your credentials in a data breach.\nSarah: What? Which breach?\nAgent: A third-party e-commerce platform called darkforum_x. Your email and password hash matched.\nSarah: I definitely used the same password there. Please lock my account right away.\nAgent: We will secure your account immediately. Please reset your password at acme.com/reset.\nSarah: Will do. Thank you for calling.`
-        : `Agent: Hi Mike, this is Acme Corp security calling about a breach involving your account.\nMike: Go ahead.\nAgent: Your credentials were found in a leaked database. We need to verify — do you use the same password on other sites?\nMike: Honestly, I might have. Lock it down, I'll reset everything.\nAgent: Understood. We'll lock the account and revoke all sessions now.`;
-
-      addLog(`&#9989; <b>${u.name}</b> — call completed (${dur}s).`, 'success', 'NOTIFY');
-
-      setWaveform(u.email, false);
-      setAction(u.email, 'call', 'done');
-      setTimeline(u.email, 0);
-      await sleep(300);
-      setAction(u.email, 'transcript', 'progress');
-      await sleep(500);
-      addLog(`&#128196; <b>Transcript retrieved for ${u.name}</b> (${dur}s conversation captured)`, 'action', 'NOTIFY');
-      setAction(u.email, 'transcript', 'done');
-      setTimeline(u.email, 1);
-
-      callResults.push({ user: u, transcript: simTranscript, callLength: dur, live: false });
-    }
-    await sleep(500);
+  for(let i=0;i<TOTAL;i++){
+    const d=$('dt-'+i);
+    if(CRIT_IDX.includes(i))d.className='dot crit';
+    else if(WARN_IDX.includes(i))d.className='dot warn';
+    else d.className='dot safe';
+    if(i%8===0)await sleep(30);
   }
 
-  addLog('<b>All 3 users contacted.</b> Transcripts collected. Routing to Claude for response decisions...', 'success', 'NOTIFY');
+  const ac=(id,v,dur=800)=>{const el=$(id),s=parseInt(el.textContent)||0,t0=performance.now();
+    (function f(n){const t=Math.min((n-t0)/dur,1);el.textContent=Math.round(s+(v-s)*(1-Math.pow(1-t,3)));if(t<1)requestAnimationFrame(f);})(performance.now());};
+  ac('mcVal',8);await sleep(300);ac('mwVal',12);await sleep(300);ac('msVal',130);
+  ilog('&#128308; <b>8 CRITICAL</b> — password hash match','lf-crit');
+  await sleep(300);ilog('&#128992; <b>12 WARNING</b> — email match only','');
+  await sleep(300);ilog('&#128994; <b>130 SAFE</b> — no match','lf-success');
   await sleep(1500);
+  saveSnapshot('match');
 
-  // === PHASE 4: DECIDE (Claude analyzes transcripts and decides) ===
-  setPhase('analyze');
-  setStatus('status-yellow', 'Deciding');
-  addLog('Routing call transcripts to Claude via Truefoundry AI Gateway for response decisions...', 'action', 'DECIDE');
-  addApiTick('POST', 'truefoundry.io/gateway/v1/chat', 200, 1842);
-  await sleep(1000);
-  addLog('Overmind trace initiated — monitoring decision chain...', '', 'DECIDE');
-  addApiTick('POST', 'overmind.ai/v1/traces', 200, 45);
-  await sleep(2000);
+  // === NOTIFY ===
+  setPhase('notify');setBadge('b-orange','Calling Users');
+  ilog('<b>Launching 8 concurrent voice calls to affected users...</b>','lf-action');
 
-  // Claude decision for each user based on transcript
-  for (let i = 0; i < callResults.length; i++) {
-    const cr = callResults[i];
-    const u = cr.user;
-    setAction(u.email, 'decision', 'progress');
-    await sleep(1200);
+  const steps=[{id:'call',text:'Voice call'},{id:'transcript',text:'Transcript'},{id:'decision',text:'Decision'},{id:'action',text:'Account action'}];
+  setLeft(`<div class="slabel">Affected Users &mdash; 8 Concurrent Calls</div>
+    <div class="user-cards">${breachUsers.map(u=>userCardHTML(u,steps)).join('')}</div>`);
 
-    let decision, reasoning;
-    if (cr.failed) {
-      decision = 'LOCK';
-      reasoning = 'Call failed — cannot confirm user identity. Locking account as precaution.';
-    } else if (cr.live && cr.transcript) {
-      // Real call — analyze transcript for lock/unlock intent
-      const t = cr.transcript.toLowerCase();
-      const wantsUnlock = t.includes('unlock') || t.includes('open it') || t.includes('access it') || t.includes('unlock it') || t.includes('keep it open') || t.includes('don\'t lock') || t.includes('need access');
-      const wantsLock = t.includes('keep it locked') || t.includes('lock it') || t.includes('keep locked') || t.includes('leave it locked') || t.includes('stay locked');
+  for(const u of breachUsers){setStep(u.email,'call','active');setCardState(u.email,'uc-active');setWave(u.email,true);}
 
-      if (wantsUnlock && !wantsLock) {
-        decision = 'UNLOCK';
-        reasoning = `User was reached and informed of the darkforum_x breach. ${u.name} understood the situation and explicitly requested their account be UNLOCKED so they can continue accessing it. They committed to resetting their password. Respecting user's choice — unlocking account, enforcing password reset on next login.`;
-      } else {
-        decision = 'LOCK';
-        reasoning = `User was reached and informed of the darkforum_x breach. Based on conversation analysis: ${wantsLock ? u.name + ' explicitly requested the account stay locked until password reset.' : u.name + ' confirmed the breach details. Keeping account locked as the safer default.'}`;
-      }
-    } else if (cr.live) {
-      decision = 'LOCK';
-      reasoning = `User was reached but transcript unavailable. Keeping account locked as precaution.`;
-    } else if (u.name === 'Sarah Chen') {
-      decision = 'LOCK';
-      reasoning = `User confirmed password reuse ("I definitely used the same password there") and explicitly requested account lockdown. High cooperation — lock immediately.`;
-    } else {
-      decision = 'LOCK';
-      reasoning = `User acknowledged potential password reuse ("I might have") and consented to lockdown. Proceeding with full account protection.`;
+  // Mock transcripts
+  const mockTranscripts={
+    'sarah.chen@acme.com':{dec:'LOCK',reason:'User confirmed password reuse and explicitly requested lockdown.'},
+    'mike.ross@acme.com':{dec:'LOCK',reason:'User acknowledged password reuse and consented to lockdown.'},
+    'priya.patel@acme.com':{dec:'LOCK',reason:'User requested lockdown, will reset password tonight.'},
+    'emma.wilson@acme.com':{dec:'LOCK',reason:'User confirmed willingness to reset. Account stays locked.'},
+    'nina.zhao@acme.com':{dec:'UNLOCK',reason:'User needs immediate access for work. Requested unlock. Committed to resetting within the hour.'},
+  };
+
+  // Launch real Bland call for Alfred
+  const alfred=breachUsers[1];let alfredCallId=null;
+  const bResult=await callBland(alfred);
+  if(bResult.call_id){alfredCallId=bResult.call_id;
+    ilog(`&#128222; <b>${alfred.name}</b> — connected (LIVE CALL)`,'lf-action');
+    iapi('POST','api.bland.ai/v1/calls',200,Math.floor(80+Math.random()*120));
+  }else{ilog(`&#10060; ${alfred.name} call failed: ${JSON.stringify(bResult)}`,'lf-crit');}
+
+  for(const u of breachUsers){
+    if(!u.mock)continue;
+    if(u.noAnswer) ilog(`&#128222; <b>${u.name}</b> — ringing...`,'lf-action');
+    else ilog(`&#128222; <b>${u.name}</b> — connected`,'lf-action');
+  }
+
+  // Schedule mock completions
+  const mockEvents=breachUsers.filter(u=>u.mock).map(u=>({user:u,finishAt:u.noAnswer?15:u.duration})).sort((a,b)=>a.finishAt-b.finishAt);
+  let mockElapsed=0;
+  const callResultsMap={};
+
+  for(const ev of mockEvents){
+    const wait=ev.finishAt-mockElapsed;
+    if(wait>0)await sleep(wait*1000);
+    mockElapsed=ev.finishAt;
+    const u=ev.user;
+    if(u.noAnswer){
+      setWave(u.email,false);setStep(u.email,'call','active');setCardState(u.email,'uc-noanswer');
+      ilog(`&#128308; <b>${u.name}</b> — no answer. Retry scheduled.`,'lf-crit');
+      callResultsMap[u.email]={user:u,noAnswer:true,dec:'LOCK',reason:'User unreachable — locking as precaution. Retry scheduled.'};
+    }else{
+      const dur=u.duration>60?`${Math.floor(u.duration/60)}m ${String(u.duration%60).padStart(2,'0')}s`:`${u.duration}s`;
+      setWave(u.email,false);setStep(u.email,'call','done');setStep(u.email,'transcript','done');
+      ilog(`&#9989; <b>${u.name}</b> — call complete (${dur})`,'lf-success');
+      const mt=mockTranscripts[u.email];
+      callResultsMap[u.email]={user:u,noAnswer:false,dec:mt?mt.dec:'LOCK',reason:mt?mt.reason:'User consented to lockdown.'};
     }
+  }
 
-    const decColor = decision === 'UNLOCK' ? 'var(--green)' : 'var(--red)';
-    const decIcon = decision === 'UNLOCK' ? '&#128275;' : '&#128274;';
-    addLog(`<b>&#129302; DECISION — ${u.name}:</b><br>
-      <b>Action:</b> <span style="color:${decColor};font-weight:700;">${decIcon} ${decision} ACCOUNT</span><br>
-      <b>Reasoning:</b> ${reasoning}`, 'decision', 'DECIDE');
+  // Poll Alfred's real call
+  let alfredTr=null,alfredLen=null;
+  if(alfredCallId){
+    ilog(`&#128266; Waiting for <b>${alfred.name}</b> live call to complete...`,'lf-action');
+    for(let p=0;p<60;p++){
+      try{const r=await fetch(`/api/bland/call/${alfredCallId}`,{headers:{'x-bland-key':BLAND_API_KEY}});
+        const d=await r.json();
+        if(d.status==='completed'||d.status==='ended'||d.queue_status==='complete'||d.completed){
+          alfredLen=d.call_length||d.duration||null;
+          alfredTr=d.concatenated_transcript||d.transcript||(d.transcripts?d.transcripts.map(t=>`${t.user}: ${t.text}`).join('\n'):null);
+          break;}}catch(e){}
+      await sleep(5000);}
+  }
+  setWave(alfred.email,false);setStep(alfred.email,'call','done');setStep(alfred.email,'transcript','done');
+  const durD=alfredLen?(alfredLen>60?`${Math.floor(alfredLen/60)}m ${Math.round(alfredLen%60)}s`:`${Math.round(alfredLen)}s`):'?';
+  ilog(`&#9989; <b>${alfred.name}</b> — call complete (${durD})`,'lf-success');
 
-    // Store decision on the callResult
-    cr.decision = decision;
+  if(alfredTr){ilog(`&#128196; <b>Transcript:</b> <em style="font-size:11px;color:var(--t2);">${alfredTr.slice(0,300)}${alfredTr.length>300?'...':''}</em>`,'lf-action');}
 
-    // Update card
-    const uid = u.email.replace(/[@.]/g, '-');
-    const decEl = document.getElementById(`${uid}-decision`);
-    if (decEl) decEl.querySelector('span').textContent = `Decision: ${decision}`;
-    setAction(u.email, 'decision', 'done');
-    setTimeline(u.email, 2);
+  let alfredDec='LOCK',alfredReason='Keeping locked as safe default.';
+  if(alfredTr){
+    const t=alfredTr.toLowerCase();
+    const wU=t.includes('unlock')||t.includes('open it')||t.includes('access it')||t.includes('keep it open')||t.includes("don't lock")||t.includes('need access');
+    const wL=t.includes('keep it locked')||t.includes('lock it')||t.includes('keep locked')||t.includes('leave it locked')||t.includes('stay locked');
+    if(wU&&!wL){alfredDec='UNLOCK';alfredReason='User explicitly requested unlock during live call.';}
+    else if(wL){alfredReason='User explicitly requested account stay locked.';}
+    else{alfredReason='No explicit unlock request — keeping locked as safe default.';}
+  }
+  callResultsMap[alfred.email]={user:alfred,noAnswer:false,dec:alfredDec,reason:alfredReason,live:true};
+
+  ilog(`<b>All calls complete.</b> Transcripts collected.`,'lf-success');
+  await sleep(1500);
+  saveSnapshot('notify');
+
+  // === RESPOND (merged decide + act) ===
+  setPhase('respond');setBadge('b-orange','Responding');
+  ilog('Claude analyzing transcripts + executing Auth0 actions...','lf-action');
+  iapi('POST','truefoundry.io/gateway/v1/chat',200,1842);
+
+  setLeft(`<div class="slabel">Analyze &amp; Respond</div><div class="user-cards">${breachUsers.map(u=>userCardHTML(u,steps)).join('')}</div>`);
+  for(const u of breachUsers){
+    const cr=callResultsMap[u.email];
+    if(cr&&!cr.noAnswer){setStep(u.email,'call','done');setStep(u.email,'transcript','done');}
+    else if(cr&&cr.noAnswer){setStep(u.email,'call','active');setCardState(u.email,'uc-noanswer');}
+  }
+  await sleep(1000);
+
+  let locked=0,unlocked=0,retries=0;
+  for(const u of breachUsers){
+    const cr=callResultsMap[u.email];if(!cr)continue;
+    // Decision
+    setStep(u.email,'decision','active');await sleep(400);
+    const act=cr.noAnswer?'LOCK (PRECAUTIONARY)':cr.dec+' ACCOUNT';
+    setActionText(u.email,'decision',act);
+    setStep(u.email,'decision','done');
+    if(cr.noAnswer) setUserStatus(u.email,'No answer','var(--yellow)');
+    else if(cr.dec==='UNLOCK') setUserStatus(u.email,'Requested unlock','var(--green)');
+    else setUserStatus(u.email,'Consented to lock','var(--t2)');
+    ilog(`&#129302; <b>${u.name}</b> — ${act}`,'lf-decision');
+    // Immediately execute
+    setStep(u.email,'action','active');await sleep(300);
+    if(cr.noAnswer){
+      iapi('PATCH',`auth0/${u.email.split('@')[0]}/block`,200,Math.floor(80+Math.random()*80));
+      setActionText(u.email,'action','Locked — retry queued');locked++;retries++;
+    }else if(cr.dec==='UNLOCK'){
+      iapi('PATCH',`auth0/${u.email.split('@')[0]}/unblock`,200,Math.floor(80+Math.random()*80));
+      setActionText(u.email,'action','Unlocked — reset enforced');unlocked++;
+    }else{
+      iapi('PATCH',`auth0/${u.email.split('@')[0]}/block`,200,Math.floor(80+Math.random()*80));
+      setActionText(u.email,'action','Locked + revoked');locked++;
+    }
+    setStep(u.email,'action','done');
+    setCardState(u.email,cr.noAnswer?'uc-noanswer':cr.dec==='UNLOCK'?'uc-unlocked':'uc-locked');
+    await sleep(250);
+  }
+  ilog(`<b>All 8 accounts processed.</b> ${locked} locked, ${unlocked} unlocked, ${retries} retry.`,'lf-success');
+  await sleep(1500);
+  saveSnapshot('respond');
+
+  // === RESEARCH ===
+  setPhase('research');setBadge('b-scan','Researching');
+  ilog('<b>Initiating autonomous research pipeline...</b>','lf-action');
+
+  setLeft(`<div class="slabel">Autonomous Research Pipeline</div><div class="research-pipeline" id="resPipe"></div><div id="resFindings" style="margin-top:12px;"></div>`);
+  const rp=$('resPipe'),rf=$('resFindings');
+
+  const researchSteps=[
+    {icon:'&#128269;',src:'Aerospike',detail:'Vector search: similar past breaches in incident database',api:'aerospike/vector-search',ms:89},
+    {icon:'&#128218;',src:'Senso.ai',detail:'Querying knowledge base: credential breach mitigation playbooks',api:'senso.ai/v1/knowledge/query',ms:234},
+    {icon:'&#128202;',src:'Airbyte',detail:'Ingesting NIST CVE database for darkforum_x vulnerabilities',api:'airbyte/sources/nist-cve/sync',ms:412},
+    {icon:'&#129302;',src:'Claude',detail:'Analyzing 12 similar incidents from 2024-2026 for pattern matching',api:'truefoundry/gateway/chat',ms:1842},
+    {icon:'&#128450;',src:'Ghost DB',detail:'Retrieving historical response outcomes for credential breaches',api:'ghost-db/incidents?type=credential',ms:45},
+    {icon:'&#128270;',src:'Senso.ai',detail:'Searching academic literature: password reuse attack vectors',api:'senso.ai/v1/research/search',ms:567},
+    {icon:'&#129302;',src:'Claude',detail:'Cross-referencing CA Civil Code 1798.82 notification requirements',api:'truefoundry/gateway/chat',ms:923},
+    {icon:'&#128202;',src:'Airbyte',detail:'Syncing CCPA enforcement actions database for compliance patterns',api:'airbyte/sources/ccpa-enforcement/sync',ms:389},
+    {icon:'&#128269;',src:'Aerospike',detail:'Finding nearest-neighbor mitigation strategies (cosine similarity: 0.94)',api:'aerospike/vector-search',ms:67},
+    {icon:'&#129302;',src:'Claude',detail:'Synthesizing research into actionable recommendations',api:'truefoundry/gateway/chat',ms:2103},
+    {icon:'&#128450;',src:'Ghost DB',detail:'Storing research findings + updating incident knowledge graph',api:'ghost-db/research/store',ms:34},
+    {icon:'&#128270;',src:'Overmind',detail:'Tracing research chain for audit + observability',api:'overmind/v1/traces',ms:28},
+  ];
+
+  for(let i=0;i<researchSteps.length;i++){
+    const s=researchSteps[i];
+    const node=document.createElement('div');node.className='rp-node rp-active';
+    node.innerHTML=`<div class="rp-icon">${s.icon}</div><div class="rp-src">${s.src}</div><div class="rp-detail">${s.detail}</div><div class="rp-status" style="background:rgba(161,161,170,.1);color:var(--t2);">RUNNING</div>`;
+    rp.appendChild(node);rp.scrollTop=rp.scrollHeight;
+    iapi('POST',s.api,200,s.ms);
+    await sleep(600);
+    node.className='rp-node rp-done';
+    node.querySelector('.rp-status').textContent='DONE';
+    node.querySelector('.rp-status').style.background='rgba(34,197,94,.15)';
+    node.querySelector('.rp-status').style.color='var(--green)';
+
+    // Show key findings at certain steps
+    if(i===3){
+      const f=document.createElement('div');f.className='rp-finding';
+      f.innerHTML=`<b>&#128161; Finding:</b> 12 similar credential breach incidents found (2024-2026). Average response time: 47 hours. Sentinel response: under 5 minutes. Pattern: 78% of affected users who received phone calls reset passwords within 24h vs 12% for email-only notification.`;
+      rf.appendChild(f);
+      ilog('&#128161; Research finding: phone notification 6.5x more effective than email','lf-decision');
+    }
+    if(i===6){
+      const f=document.createElement('div');f.className='rp-finding';
+      f.innerHTML=`<b>&#9878; Compliance:</b> CA Civil Code 1798.82 requires notification "in the most expedient time possible." Phone calls satisfy the "expedient" requirement. Written notice must follow within 10 business days. CCPA requires AG notification if 500+ CA residents affected.`;
+      rf.appendChild(f);
+      ilog('&#9878; CA 1798.82 compliance requirements identified','lf-action');
+    }
+    if(i===9){
+      const f=document.createElement('div');f.className='rp-finding';
+      f.innerHTML=`<b>&#129302; Recommendation:</b> Based on analysis of 12 similar incidents and NIST SP 800-61r2 guidelines: (1) Maintain account locks for minimum 72h, (2) Implement credential stuffing detection on login endpoints, (3) Enforce MFA for all reactivated accounts, (4) Monitor darkforum_x for additional dumps over next 30 days.`;
+      rf.appendChild(f);
+      ilog('&#129302; Claude synthesized 4 actionable recommendations from research','lf-success');
+    }
+    await sleep(300);
+  }
+  ilog('<b>Research pipeline complete.</b> 12 sources queried, 3 key findings, 4 recommendations.','lf-success');
+  await sleep(1500);
+  saveSnapshot('research');
+
+  // === REPORT ===
+  setPhase('report');setBadge('b-scan','Generating Report');
+  ilog('<b>Generating CA-compliant incident report (SB-1386 / CCPA)...</b>','lf-action');
+
+  setLeft(`<div class="slabel">Incident Report — CA Civil Code 1798.82 / CCPA Compliant</div><div id="reportContent" style="overflow-y:auto;"></div>`);
+  const rc=$('reportContent');
+
+  const rTime=new Date();
+  const reportSections=[
+    {title:'1. Executive Summary',body:`<b>Incident ID:</b> SENTINEL-2026-0327-001<br><b>Date of Discovery:</b> ${rTime.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})} at ${rTime.toLocaleTimeString('en-US')}<br><b>Classification:</b> P1 — Credential Breach via Third-Party Compromise<br><b>Breach Source:</b> darkforum_x.onion (compromised e-commerce platform)<br><b>Total Records in Breach:</b> 150 credential pairs (email + bcrypt password hash)<br><b>Acme Corp Users Affected:</b> 8 critical (password reuse confirmed), 12 warning (email match only)<br><b>Time to Containment:</b> Under 5 minutes from detection to full account lockdown<br><b>Reporting Entity:</b> Acme Corp, 100 Main Street, San Francisco, CA 94105`},
+    {title:'2. Nature of the Breach (CA Civ. Code 1798.82(d)(2))',body:`On March 25, 2026, an unauthorized third party gained access to the user database of darkforum_x, a third-party e-commerce platform. The attacker exfiltrated approximately 150 user records containing email addresses and bcrypt-hashed passwords, which were subsequently published on darkforum_x.onion.<br><br>On ${rTime.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}, Sentinel's automated dark web monitoring system detected the published dump and cross-referenced leaked credentials against Acme Corp's user database. <b>8 users were identified as critical</b> — their leaked password hashes matched Acme Corp credentials, confirming password reuse across services.`},
+    {title:'3. Categories of Personal Information (CA Civ. Code 1798.81.5(d))',body:`<b>Compromised data elements:</b><br>&#8226; <b>Email addresses</b> — containing first and last name, constituting personally identifiable information<br>&#8226; <b>Passwords</b> — stored as bcrypt hashes; while not plaintext, these are vulnerable to offline brute-force attacks<br><br><b>NOT compromised in this incident:</b><br>&#8226; Social Security numbers<br>&#8226; Driver's license or state ID numbers<br>&#8226; Financial account, credit, or debit card numbers<br>&#8226; Medical or health insurance information<br>&#8226; Biometric data<br><br>Per CA Civil Code 1798.81.5(d)(1)(A), the combination of email address + password constitutes "personal information" requiring notification when breached.`},
+    {title:'4. Notification of Affected Individuals (CA Civ. Code 1798.82)',body:`<b>Legal Requirement:</b> "The disclosure shall be made in the most expedient time possible and without unreasonable delay" (CA Civ. Code 1798.82(a)).<br><br><b>Method of Initial Notification:</b> Automated AI-assisted voice calls placed to all 8 critical users within 5 minutes of breach detection. Each call was conducted by an AI security agent that:<br>&#8226; Identified itself as Acme Corp security<br>&#8226; Described the nature and scope of the breach<br>&#8226; Informed the user of protective actions already taken<br>&#8226; Obtained the user's preference regarding account status (lock/unlock)<br>&#8226; Directed the user to reset credentials at acme.com/reset<br><br><b>Call Outcomes:</b><br>&#8226; ${8-retries} of 8 users successfully reached and verbally notified<br>&#8226; ${retries} users unreachable — accounts locked precautionarily, retry calls queued<br>&#8226; ${unlocked} user(s) requested immediate account unlock (password reset enforced)<br><br><b>Follow-up Required:</b> Written notification via email and/or postal mail to all affected individuals within 10 business days per CA Civ. Code 1798.82(d). Template notification letter should be reviewed by General Counsel.`},
+    {title:'5. Containment and Remediation Actions',body:`All actions below were executed autonomously by Sentinel with zero human intervention:<br><br><b>Immediate Actions (within 5 minutes of detection):</b><br>&#8226; ${locked} user accounts locked via Auth0 Management API (PATCH /api/v2/users/{id} blocked=true)<br>&#8226; All active sessions revoked for locked accounts (POST /api/v2/users/{id}/sessions/revoke)<br>&#8226; ${unlocked} account(s) unlocked per explicit user request; mandatory password reset enforced on next login<br>&#8226; ${retries} account(s) locked as precautionary measure due to failed contact; automated retry scheduled<br>&#8226; 12 warning-level accounts flagged for enhanced monitoring and password reset prompt on next login<br><br><b>Ongoing Monitoring:</b><br>&#8226; Continuous dark web monitoring for additional data dumps from darkforum_x<br>&#8226; Login anomaly detection enabled for all 20 affected accounts<br>&#8226; Credential stuffing detection on all authentication endpoints`},
+    {title:'6. Risk Assessment and Recommendations (NIST SP 800-61r2)',body:`Based on automated analysis of 12 similar credential breach incidents (2024-2026) and NIST Special Publication 800-61 Revision 2 (Computer Security Incident Handling Guide):<br><br><b>6.1 Maintain Account Locks (72h minimum)</b><br>Analysis shows 89% of credential stuffing attacks using leaked data occur within 48 hours of dump publication. A 72-hour lock window provides adequate protection.<br><br><b>6.2 Deploy Credential Stuffing Detection</b><br>Implement rate limiting and behavioral analysis on login endpoints to detect bulk authentication attempts using known leaked credentials.<br><br><b>6.3 Enforce Multi-Factor Authentication</b><br>Require MFA enrollment as a condition of account reactivation for all affected users. This eliminates future credential reuse risk for these accounts.<br><br><b>6.4 Continuous Source Monitoring (30 days)</b><br>Maintain active monitoring of darkforum_x and related forums for additional data dumps, as breaches often result in multiple partial releases.<br><br><b>6.5 Update Password Policy</b><br>Enforce minimum 12-character passwords with complexity requirements. Integrate breached password checking via HaveIBeenPwned API (k-anonymity model) to prevent known-compromised passwords.`},
+    {title:'7. Attorney General Notification Assessment (CA Civ. Code 1798.82(f))',body:`<b>Statutory Threshold:</b> Notification to the California Attorney General is required when a breach affects more than 500 California residents (CA Civ. Code 1798.82(f)).<br><br><b>Current Impact:</b> 8 confirmed affected users<br><b>Determination:</b> AG notification is <b>NOT REQUIRED</b> at this time as the number of affected California residents is below the 500-person threshold.<br><br><b>Contingency:</b> If additional data dumps are discovered from the same source and the cumulative total of affected California residents exceeds 500, notification to the Attorney General must be submitted within 72 hours via the AG's online breach reporting portal. The notification must include a single sample copy of the notification letter sent to affected individuals.<br><br><b>Regulatory References:</b><br>&#8226; California Civil Code 1798.82 (SB-1386 — Security Breach Notification)<br>&#8226; California Civil Code 1798.81.5 (Definition of Personal Information)<br>&#8226; California Consumer Privacy Act (CCPA) — Civil Code 1798.100-199<br>&#8226; NIST SP 800-61r2 — Computer Security Incident Handling Guide<br>&#8226; NIST SP 800-63B — Digital Identity Guidelines: Authentication and Lifecycle Management`},
+    {title:'8. Document Control',body:`<b>Report ID:</b> SENTINEL-2026-0327-001<br><b>Prepared By:</b> Sentinel Autonomous Breach Response System<br><b>Date Prepared:</b> ${rTime.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}<br><b>Classification:</b> CONFIDENTIAL — Attorney-Client Privileged<br><b>Retention Period:</b> 7 years per California recordkeeping requirements<br><b>Required Review:</b> General Counsel and/or Data Protection Officer within 48 hours<br><b>Distribution:</b> Restricted to Security Team, Legal Department, and Executive Leadership<br><br><em>This report was generated automatically by Sentinel. All factual assertions are based on system logs, API responses, and automated analysis. This document should be reviewed by qualified legal counsel before submission to any regulatory body or use in legal proceedings.</em>`},
+  ];
+
+  for(const s of reportSections){
+    const sec=document.createElement('div');sec.className='report-section';
+    sec.innerHTML=`<div class="rs-title">${s.title}</div><div class="rs-body">${s.body}</div>`;
+    rc.appendChild(sec);
+    ilog(`&#128196; Report section generated: <b>${s.title}</b>`,'lf-action');
     await sleep(800);
   }
 
-  addLog(`<b>&#129302; Claude has decided: Lock all 3 accounts.</b> Each decision backed by call transcript evidence.`, 'success', 'DECIDE');
-  await sleep(1500);
+  // Add download buttons
+  const dlBar=document.createElement('div');
+  dlBar.style.cssText='margin-top:16px;display:flex;gap:8px;';
+  dlBar.innerHTML=`<button id="dlPdf" class="dl-btn">Download PDF</button><button id="dlDocx" class="dl-btn">Download DOCX</button>`;
+  rc.appendChild(dlBar);
 
-  // === PHASE 5: RESPOND (Lock accounts based on decisions) ===
-  setPhase('lock');
-  setStatus('status-orange', 'Securing');
-  document.getElementById('progressSection').classList.add('visible');
-  addLog('Executing Auth0 account actions based on Claude decisions...', 'action', 'RESPOND');
-  await sleep(600);
+  window._reportSections=reportSections;
+  window._reportMeta={date:new Date().toISOString(),locked,unlocked,retries};
 
-  let lockedCount = 0, unlockedCount = 0;
-  for (let i = 0; i < callResults.length; i++) {
-    const cr = callResults[i];
-    const u = cr.user;
-    const uid = u.email.replace(/[@.]/g, '-');
-    const lockEl = document.getElementById(`${uid}-lock`);
-    setAction(u.email, 'lock', 'progress');
-    await sleep(400);
+  document.getElementById('dlPdf').addEventListener('click',()=>downloadReport('pdf'));
+  document.getElementById('dlDocx').addEventListener('click',()=>downloadReport('docx'));
 
-    if (cr.decision === 'UNLOCK') {
-      addApiTick('PATCH', `auth0.com/api/v2/users/${u.email.split('@')[0]}`, 200, Math.floor(90 + Math.random() * 80));
-      if (lockEl) lockEl.querySelector('span').textContent = 'Account unlocked — password reset enforced';
-      addLog(`&#128275; <b>${u.name}</b> — account UNLOCKED per user request. Password reset enforced on next login.`, 'success', 'RESPOND');
-      unlockedCount++;
-    } else {
-      addApiTick('PATCH', `auth0.com/api/v2/users/${u.email.split('@')[0]}`, 200, Math.floor(90 + Math.random() * 80));
-      addApiTick('POST', `auth0.com/api/v2/users/${u.email.split('@')[0]}/sessions/revoke`, 200, Math.floor(60 + Math.random() * 50));
-      if (lockEl) lockEl.querySelector('span').textContent = 'Account locked + sessions revoked';
-      addLog(`&#128274; <b>${u.name}</b> — account LOCKED, all sessions revoked.`, 'action', 'RESPOND');
-      lockedCount++;
-    }
-    setAction(u.email, 'lock', 'done');
-    setTimeline(u.email, 3);
-    updateProgress(i + 1);
-    await sleep(500);
-  }
-
-  addLog(`<b>All 3 accounts processed.</b> ${lockedCount} locked, ${unlockedCount} unlocked per user request. Every action backed by conversation evidence.`, 'success', 'RESPOND');
+  ilog('<b>&#128196; Incident report generated.</b> CA SB-1386 + CCPA compliant.','lf-success');
+  saveSnapshot('report');
   await sleep(1000);
 
-  // === PHASE 6: COMPLETE ===
-  setPhase('complete');
-  setStatus('status-green', 'Contained');
-  document.querySelector('.bg-glow-1').style.background = 'var(--green)';
-  document.querySelector('.bg-glow-1').style.opacity = '0.12';
-  clearInterval(timerInterval);
-  updateTimer();
-  document.getElementById('scanline').classList.remove('active');
-  document.querySelector('#statusBadge .dot').style.animation = 'none';
+  // Final state
+  setBadge('b-green','Complete');
 
-  const elapsed = Math.floor((Date.now() - timerStart) / 1000);
-  const em = Math.floor(elapsed / 60), es = elapsed % 60;
+  clearInterval(timerInt);updateTimer();
+  document.querySelector('#badge .dot').style.animation='none';
 
-  // Show time comparison
-  const tcDiv = document.getElementById('timeCompare');
-  tcDiv.classList.add('visible');
-  document.getElementById('mainGrid').classList.add('with-compare');
-  document.getElementById('tcSentinelTime').textContent = `${em}m ${es}s`;
-  await sleep(100);
-  document.getElementById('tcSentinel').style.width = '2%';
-  document.getElementById('tcIndustry').style.width = '100%';
+  const elapsed=Math.floor((Date.now()-timerStart)/1000),em=Math.floor(elapsed/60),es=elapsed%60;
+  ilog(`<b>&#128737; SENTINEL COMPLETE</b> — ${locked} locked, ${unlocked} unlocked. Report generated. ${em}m ${es}s total.`,'lf-success');
 
-  addLog(`<b>&#128737; BREACH RESPONSE COMPLETE</b><br><br>
-    &#128202; <b>150</b> credentials analyzed<br>
-    &#128222; <b>3</b> users called and briefed by AI voice agent<br>
-    &#128196; <b>3</b> call transcripts analyzed by Claude<br>
-    &#128274; <b>${lockedCount}</b> accounts locked per user/agent decision<br>
-    &#128275; <b>${unlockedCount}</b> accounts unlocked per user request<br>
-    &#128992; <b>8</b> warning accounts flagged for monitoring<br>
-    &#9201; <b>Response time: ${em}m ${es}s</b> (industry avg: 277 days)<br>
-    &#129302; <b>Human intervention: ZERO</b><br><br>
-    <em>Every decision was informed by a real conversation with the affected user. The agent didn't just detect and lock — it listened, understood, and respected user preferences.</em>`, 'success', 'COMPLETE');
+  // Enable pipeline tabs for review
+  enableTabs();
+  // Start on report tab
+  $('ps-report').classList.add('tab-active');
+
+  $('timeBar').classList.add('visible');
+  $('tbTime').textContent=`${em}m ${es}s`;
+  await sleep(100);$('tbSentinel').style.width='2%';$('tbIndustry').style.width='100%';
 }
 
-document.getElementById('uploadBox').addEventListener('click', runSimulation);
+function downloadReport(){
+  const r=window._reportSections,m=window._reportMeta;
+  if(!r)return;
+
+  const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8"><title>Security Incident Report — SENTINEL-2026-0327-001</title>
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->
+<style>
+  @page{size:letter;margin:1in 1in 1in 1in;}
+  body{font-family:'Calibri','Segoe UI',sans-serif;font-size:11pt;color:#1a1a1a;line-height:1.65;}
+  h1{font-size:22pt;font-weight:bold;color:#000;border-bottom:3px solid #000;padding-bottom:6px;margin-top:0;}
+  h2{font-size:13pt;font-weight:bold;color:#000;margin-top:20px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #d1d5db;}
+  p,div{margin:0;}
+  .header-bar{background:#000;color:#fff;padding:8px 16px;font-size:9pt;text-align:center;letter-spacing:3px;text-transform:uppercase;margin-bottom:20px;}
+  .meta-table{width:100%;border-collapse:collapse;margin-bottom:20px;}
+  .meta-table td{padding:4px 10px;font-size:10pt;border:none;vertical-align:top;}
+  .meta-table .label{font-weight:bold;width:180px;color:#444;}
+  .section{margin-bottom:16px;page-break-inside:avoid;}
+  .section-body{font-size:11pt;line-height:1.7;}
+  .section-body b{font-weight:bold;}
+  table.data{border-collapse:collapse;width:100%;margin:10px 0;}
+  table.data td,table.data th{border:1px solid #d1d5db;padding:6px 10px;font-size:10pt;text-align:left;}
+  table.data th{background:#f3f4f6;font-weight:bold;font-size:9pt;text-transform:uppercase;letter-spacing:0.5px;}
+  .footer-legal{margin-top:30px;padding-top:10px;border-top:2px solid #000;font-size:8.5pt;color:#666;line-height:1.5;}
+  .page-footer{font-size:8pt;color:#999;text-align:center;margin-top:20px;}
+</style></head><body>
+<div class="header-bar">Confidential — Attorney-Client Privileged — Do Not Distribute</div>
+<h1>Security Incident Report</h1>
+<table class="meta-table">
+  <tr><td class="label">Report ID</td><td>SENTINEL-2026-0327-001</td></tr>
+  <tr><td class="label">Date of Incident</td><td>March 25, 2026</td></tr>
+  <tr><td class="label">Date of Detection</td><td>${m.date}</td></tr>
+  <tr><td class="label">Classification</td><td>P1 — Credential Breach (Third-Party Compromise)</td></tr>
+  <tr><td class="label">Reporting Entity</td><td>Acme Corp, 100 Main Street, San Francisco, CA 94105</td></tr>
+  <tr><td class="label">Prepared By</td><td>Sentinel Autonomous Breach Response System</td></tr>
+  <tr><td class="label">Applicable Regulations</td><td>CA Civil Code §1798.82 (SB-1386), CCPA (§1798.100-199), NIST SP 800-61r2</td></tr>
+</table>
+
+${r.map(s=>{
+  let body=s.body.replace(/&#8226;/g,'&bull;')
+    .replace(/<span class="report-badge"[^>]*>(.*?)<\/span>/g,'<b>[$1]</b>')
+    .replace(/<span style="color:var\(--green\);font-weight:700;">(.*?)<\/span>/g,'<b>$1</b>')
+    .replace(/<span style="color:var\(--red\);font-weight:700;">(.*?)<\/span>/g,'<b>$1</b>');
+  return '<div class="section"><h2>'+s.title+'</h2><div class="section-body">'+body+'</div></div>';
+}).join('')}
+
+<div class="footer-legal">
+<b>Legal Notice:</b> This report was generated automatically by the Sentinel Autonomous Breach Response System and is intended solely for use by authorized personnel, legal counsel, and regulatory compliance officers of Acme Corp. This document may contain information protected by the attorney-client privilege and/or the work product doctrine. Any unauthorized review, use, disclosure, or distribution is prohibited.<br><br>
+All factual assertions contained herein are based on system logs, API response records, call transcripts, and automated analysis conducted at the time of the incident. This document should be reviewed by qualified legal counsel before submission to any regulatory body, use in legal proceedings, or distribution outside the immediate incident response team.<br><br>
+<b>Retention:</b> This document must be retained for a minimum of 7 years in accordance with California recordkeeping requirements. <b>Review:</b> General Counsel and/or Data Protection Officer review required within 48 hours of generation.
+</div>
+<div class="page-footer">SENTINEL-2026-0327-001 | Generated ${m.date} | Page 1</div>
+</body></html>`;
+
+  const blob=new Blob([html],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='Incident_Report_SENTINEL-2026-0327-001.docx';
+  a.click();
+  URL.revokeObjectURL(url);
+  ilog('&#128196; <b>Report downloaded</b> — Incident_Report_SENTINEL-2026-0327-001.docx','lf-success');
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='d'||e.key==='D')run();});
 </script>
 </body>
 </html>
