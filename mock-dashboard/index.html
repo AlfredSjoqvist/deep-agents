@@ -204,8 +204,16 @@ body{background:var(--bg);color:var(--t1);font-family:'Inter',system-ui,sans-ser
 .research-pipeline{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
 .rp-node{background:var(--card);border-radius:8px;padding:10px 14px;border:1px solid var(--border);
   display:flex;align-items:center;gap:10px;font-size:12px;transition:all .4s;animation:fadeUp .3s ease;}
-.rp-node .rp-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;
-  font-size:13px;flex-shrink:0;font-weight:700;}
+.rp-node .rp-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+  font-size:11px;flex-shrink:0;font-weight:800;font-family:'JetBrains Mono',monospace;letter-spacing:-0.5px;}
+.rp-icon.ico-aerospike{background:rgba(239,68,68,.15)!important;color:#f87171!important;border:1.5px solid rgba(239,68,68,.25);}
+.rp-icon.ico-senso{background:rgba(16,185,129,.15)!important;color:#34d399!important;border:1.5px solid rgba(16,185,129,.25);}
+.rp-icon.ico-airbyte{background:rgba(99,102,241,.15)!important;color:#a5b4fc!important;border:1.5px solid rgba(99,102,241,.25);}
+.rp-icon.ico-claude{background:rgba(212,165,116,.2)!important;color:#d4a574!important;border:1.5px solid rgba(212,165,116,.3);}
+.rp-icon.ico-ghost{background:rgba(168,85,247,.15)!important;color:#c084fc!important;border:1.5px solid rgba(168,85,247,.25);}
+.rp-icon.ico-overmind{background:rgba(99,102,241,.15)!important;color:#818cf8!important;border:1.5px solid rgba(99,102,241,.25);}
+.rp-icon.ico-auth0{background:rgba(235,84,36,.15)!important;color:#fb923c!important;border:1.5px solid rgba(235,84,36,.25);}
+.rp-icon.ico-truefoundry{background:rgba(245,158,11,.15)!important;color:#fbbf24!important;border:1.5px solid rgba(245,158,11,.25);}
 .rp-node .rp-src{color:var(--t2);font-weight:600;min-width:80px;}
 .rp-node .rp-detail{color:var(--t3);flex:1;font-size:11px;}
 .rp-node .rp-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;}
@@ -687,24 +695,24 @@ async function run(){
   const rp=$('resPipe'),rf=$('resFindings');
 
   const researchSteps=[
-    {icon:'&#128269;',src:'Aerospike',detail:'Vector search: similar past breaches in incident database',api:'aerospike/vector-search',ms:89},
-    {icon:'&#128218;',src:'Senso.ai',detail:'Querying knowledge base: credential breach mitigation playbooks',api:'senso.ai/v1/knowledge/query',ms:234},
-    {icon:'&#128202;',src:'Airbyte',detail:'Ingesting NIST CVE database for darkforum_x vulnerabilities',api:'airbyte/sources/nist-cve/sync',ms:412},
-    {icon:'&#129302;',src:'Claude',detail:'Analyzing 12 similar incidents from 2024-2026 for pattern matching',api:'truefoundry/gateway/chat',ms:1842},
-    {icon:'&#128450;',src:'Ghost DB',detail:'Retrieving historical response outcomes for credential breaches',api:'ghost-db/incidents?type=credential',ms:45},
-    {icon:'&#128270;',src:'Senso.ai',detail:'Searching academic literature: password reuse attack vectors',api:'senso.ai/v1/research/search',ms:567},
-    {icon:'&#129302;',src:'Claude',detail:'Cross-referencing CA Civil Code 1798.82 notification requirements',api:'truefoundry/gateway/chat',ms:923},
-    {icon:'&#128202;',src:'Airbyte',detail:'Syncing CCPA enforcement actions database for compliance patterns',api:'airbyte/sources/ccpa-enforcement/sync',ms:389},
-    {icon:'&#128269;',src:'Aerospike',detail:'Finding nearest-neighbor mitigation strategies (cosine similarity: 0.94)',api:'aerospike/vector-search',ms:67},
-    {icon:'&#129302;',src:'Claude',detail:'Synthesizing research into actionable recommendations',api:'truefoundry/gateway/chat',ms:2103},
-    {icon:'&#128450;',src:'Ghost DB',detail:'Storing research findings + updating incident knowledge graph',api:'ghost-db/research/store',ms:34},
-    {icon:'&#128270;',src:'Overmind',detail:'Tracing research chain for audit + observability',api:'overmind/v1/traces',ms:28},
+    {ico:'ico-aerospike',abbr:'AS',src:'Aerospike',detail:'Vector search: similar past breaches in incident database',api:'aerospike/vector-search',ms:89},
+    {ico:'ico-senso',abbr:'S',src:'Senso.ai',detail:'Querying knowledge base: credential breach mitigation playbooks',api:'senso.ai/v1/knowledge/query',ms:234},
+    {ico:'ico-airbyte',abbr:'AB',src:'Airbyte',detail:'Ingesting NIST CVE database for darkforum_x vulnerabilities',api:'airbyte/sources/nist-cve/sync',ms:412},
+    {ico:'ico-claude',abbr:'C',src:'Claude',detail:'Analyzing 12 similar incidents from 2024-2026 for pattern matching',api:'truefoundry/gateway/chat',ms:1842},
+    {ico:'ico-ghost',abbr:'G',src:'Ghost DB',detail:'Retrieving historical response outcomes for credential breaches',api:'ghost-db/incidents?type=credential',ms:45},
+    {ico:'ico-senso',abbr:'S',src:'Senso.ai',detail:'Searching academic literature: password reuse attack vectors',api:'senso.ai/v1/research/search',ms:567},
+    {ico:'ico-claude',abbr:'C',src:'Claude',detail:'Cross-referencing CA Civil Code 1798.82 notification requirements',api:'truefoundry/gateway/chat',ms:923},
+    {ico:'ico-airbyte',abbr:'AB',src:'Airbyte',detail:'Syncing CCPA enforcement actions database for compliance patterns',api:'airbyte/sources/ccpa-enforcement/sync',ms:389},
+    {ico:'ico-aerospike',abbr:'AS',src:'Aerospike',detail:'Finding nearest-neighbor mitigation strategies (cosine similarity: 0.94)',api:'aerospike/vector-search',ms:67},
+    {ico:'ico-claude',abbr:'C',src:'Claude',detail:'Synthesizing research into actionable recommendations',api:'truefoundry/gateway/chat',ms:2103},
+    {ico:'ico-ghost',abbr:'G',src:'Ghost DB',detail:'Storing research findings + updating incident knowledge graph',api:'ghost-db/research/store',ms:34},
+    {ico:'ico-overmind',abbr:'OM',src:'Overmind',detail:'Tracing research chain for audit + observability',api:'overmind/v1/traces',ms:28},
   ];
 
   for(let i=0;i<researchSteps.length;i++){
     const s=researchSteps[i];
     const node=document.createElement('div');node.className='rp-node rp-active';
-    node.innerHTML=`<div class="rp-icon">${s.icon}</div><div class="rp-src">${s.src}</div><div class="rp-detail">${s.detail}</div><div class="rp-status" style="background:rgba(161,161,170,.1);color:var(--t2);">RUNNING</div>`;
+    node.innerHTML=`<div class="rp-icon ${s.ico}">${s.abbr}</div><div class="rp-src">${s.src}</div><div class="rp-detail">${s.detail}</div><div class="rp-status" style="background:rgba(161,161,170,.1);color:var(--t2);">RUNNING</div>`;
     rp.appendChild(node);rp.scrollTop=rp.scrollHeight;
     iapi('POST',s.api,200,s.ms);
     await sleep(600);
