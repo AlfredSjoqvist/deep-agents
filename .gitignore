@@ -4,6 +4,10 @@
 *.pem
 credentials.json
 
+# Node
+node_modules/
+web/node_modules/
+
 # Python
 __pycache__/
 *.py[cod]
