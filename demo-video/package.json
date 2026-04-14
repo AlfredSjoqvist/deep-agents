@@ -1,0 +1,28 @@
+{
+  "name": "demo-video",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "preview": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts SentinelDemo out/sentinel-demo.mp4",
+    "render:intro": "remotion render src/index.ts SentinelDemo out/intro.mp4 --frames=0-149",
+    "render:outro": "remotion render src/index.ts SentinelDemo out/outro.mp4 --frames=3300-3599",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.441",
+    "@remotion/media": "^4.0.441",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "remotion": "^4.0.441"
+  }
+}
