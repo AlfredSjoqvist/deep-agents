@@ -33,6 +33,16 @@
       "env": {
         "BLAND_API_KEY": "${BLAND_API_KEY}"
       }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp",
+        "--caps",
+        "vision",
+        "--viewport-size",
+        "1280x720"
+      ]
     }
   }
 }
